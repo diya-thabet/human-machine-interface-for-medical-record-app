@@ -1,0 +1,68 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+.bower_components
+jspm_packages/
+
+# Build output
+build/
+dist/
+coverage/
+
+# React Native / Expo
+.expo/
+.expo-shared/
+web-build/
+ios/
+android/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+*.swp
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Cache
+.cache/
+*.tmp
+tmp/
+temp/
+
+# Misc
+*.bak
+*.orig
+*.rej
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Metro, Babel, ESLint
+.expo/
+babel.config.js
+metro.config.js
+.eslintcache
+
+# Optional: lock files (keep one)
+# yarn.lock
+# package-lock.json
