@@ -23,7 +23,7 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
 
   const goToHome = () => navigation.navigate('PatientDashboard');
   const goToMyRecords = () => { /* Already on My Records */ };
-  const goToMyProfile = () => console.log('Go to My Profile (Patient)');
+  const goToMyProfile = () => navigation.navigate('PatientProfile');
 
   const handleAddRecord = () => {
     navigation.navigate('AddRecord', { patientId: 'patient123', patientName: 'John Doe' });

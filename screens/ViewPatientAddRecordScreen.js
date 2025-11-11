@@ -27,7 +27,8 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
   };
 
   const goToPatients = () => { navigation.navigate('DoctorDashboard'); };
-  const goToMyProfile = () => console.log('Go to My Profile (Doctor)');
+  // FIX: This line is updated to navigate to DoctorProfile
+  const goToMyProfile = () => navigation.navigate('DoctorProfile'); 
 
   return (
     <SafeAreaView style={styles.container}>
