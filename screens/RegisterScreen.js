@@ -1,7 +1,12 @@
 // screens/RegisterScreen.js
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from 'react-native'; // Added Alert here
 import { Ionicons } from '@expo/vector-icons'; // For icons in role selection
+
+// --- IMPORT FIREBASE SERVICES ---
+import { auth, db } from '../config/firebaseConfig'; // Import auth and db from your config
+import { createUserWithEmailAndPassword } from 'firebase/auth'; // Firebase Auth function for creating users
+import { doc, setDoc } from 'firebase/firestore'; // Firestore functions for saving user role
 
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = React.useState('');
@@ -9,14 +14,56 @@ const RegisterScreen = ({ navigation }) => {
   const [password, setPassword] = React.useState('');
   const [role, setRole] = React.useState('PATIENT'); // Default role: PATIENT
 
-  const handleRegister = () => {
-    // Implement your registration logic here
-    console.log('Attempting registration with:', { fullName, email, password, role });
-    // In a real app, you would make an API call to /auth/register
-    // e.g., fetch('http://localhost:8080/auth/register', { /* ... */ })
-    // On successful registration, you might navigate back to login or directly to a dashboard
-    // For now, let's navigate back to Login
-    navigation.goBack();
+  // --- MODIFIED handleRegister FUNCTION ---
+  const handleRegister = async () => {
+    // Basic input validation
+    if (!fullName || !email || !password) {
+      Alert.alert("Registration Error", "Please fill in all fields (Full Name, Email, Password).");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Registration Error", "Password should be at least 6 characters long.");
+      return;
+    }
+
+    try {
+      // 1. Create user in Firebase Authentication
+      console.log('Attempting Firebase user creation...');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log("User registered successfully in Firebase Auth:", user.email, "UID:", user.uid);
+
+      // 2. Save user's additional data (like fullName and role) to Cloud Firestore
+      //    The document ID for this user will be their unique Firebase UID (user.uid)
+      console.log('Saving user data to Firestore...');
+      await setDoc(doc(db, "users", user.uid), {
+        fullName: fullName,
+        email: user.email,
+        role: role, // 'PATIENT' or 'DOCTOR'
+        createdAt: new Date(), // Optional: A timestamp for when the user was created
+        // You can add more initial profile fields here as needed
+      });
+      console.log("User data saved to Firestore successfully for UID:", user.uid);
+
+      Alert.alert("Success", "Account created successfully! You can now log in.");
+      navigation.replace('Login'); // Navigate back to Login screen after successful registration
+
+    } catch (error) {
+      console.error("Firebase Registration failed:", error); // Log the full error object for debugging
+      let errorMessage = "Registration failed. Please try again.";
+
+      // Provide more user-friendly error messages based on Firebase error codes
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "That email address is already in use!";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "That email address is invalid!";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Password should be at least 6 characters.";
+      }
+      // Add more specific error codes if you encounter them during testing
+
+      Alert.alert("Registration Error", errorMessage);
+    }
   };
 
   return (
@@ -100,7 +147,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   title: {
-    fontSize: 28, // Slightly smaller than login for more content
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#2C3E50',
     marginBottom: 30,
@@ -122,14 +169,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginBottom: 30,
-    marginTop: 10, // Added spacing
+    marginTop: 10,
   },
   roleButton: {
     flex: 1,
-    flexDirection: 'row', // Align icon and text horizontally
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 60, // Large tap target
+    height: 60,
     backgroundColor: '#FFF',
     borderColor: '#00BCD4',
     borderWidth: 1,
@@ -142,13 +189,13 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   roleButtonActive: {
-    backgroundColor: '#00BCD4', // Accent color when active
+    backgroundColor: '#00BCD4',
   },
   roleButtonText: {
     color: '#00BCD4',
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 8, // Space between icon and text
+    marginLeft: 8,
   },
   roleButtonTextActive: {
     color: '#FFF',
