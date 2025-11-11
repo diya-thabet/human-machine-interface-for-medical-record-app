@@ -47,10 +47,9 @@ Follow these steps to set up and run the project locally on your machine.
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repository-url>
-    cd <your-project-folder>
+    git clone https://github.com/diya-thabet/human-machine-interface-for-medical-record-app.git
+    cd human-machine-interface-for-medical-record-app
     ```
-    (Replace `<your-repository-url>` and `<your-project-folder>` with your actual repository details.)
 
 2.  **Install dependencies:**
     ```bash
