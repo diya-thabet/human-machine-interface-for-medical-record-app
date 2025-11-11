@@ -13,21 +13,30 @@ This project implements a mobile application interface for managing medical reco
 -   **Doctor Profile Management:** Doctors can view and update their personal and professional information.
 -   **Responsive UI:** Designed to be user-friendly across various mobile devices.
 
-## App Screenshots
+## App Screenshots for Patient
 
-Here are some screenshots demonstrating the application's interface:
+Here are some screenshots demonstrating the application's interface for Patient:
 
 <p align="center">
-  <img src="interfaces/1.jpg" width="300" alt="Screenshot 1: Login Screen" />
-  <img src="interfaces/2.jpg" width="300" alt="Screenshot 2: Registration Screen" />
-  <img src="interfaces/3.jpg" width="300" alt="Screenshot 3: Patient Dashboard" />
-  <img src="interfaces/4.jpg" width="300" alt="Screenshot 4: Patient Records History" />
-  <img src="interfaces/5.jpg" width="300" alt="Screenshot 5: Add Record Screen" />
-  <img src="interfaces/6.jpg" width="300" alt="Screenshot 6: Patient Profile" />
-  <img src="interfaces/7.jpg" width="300" alt="Screenshot 7: Doctor Dashboard" />
-  <img src="interfaces/8.jpg" width="300" alt="Screenshot 8: View Patient Profile (by Doctor)" />
-  <img src="interfaces/9.jpg" width="300" alt="Screenshot 9: Doctor's View of Patient Records" />
-  <img src="interfaces/10.jpg" width="300" alt="Screenshot 10: Doctor Profile" />
+  <img src="interfaces/1.jpg" width="200" alt="Screenshot 1: Login Screen" />
+  <img src="interfaces/2.jpg" width="200" alt="Screenshot 2: Registration Screen" />
+  <img src="interfaces/3.jpg" width="200" alt="Screenshot 3: Patient Dashboard" />
+  <img src="interfaces/4.jpg" width="200" alt="Screenshot 4: Patient Records History" />
+  <img src="interfaces/5.jpg" width="200" alt="Screenshot 5: Add Record Screen" />
+  <img src="interfaces/6.jpg" width="200" alt="Screenshot 6: Patient Profile" />
+  <img src="interfaces/7.jpg" width="200" alt="Screenshot 7: Doctor Dashboard" />
+  <img src="interfaces/8.jpg" width="200" alt="Screenshot 8: View Patient Profile (by Doctor)" />
+  <img src="interfaces/9.jpg" width="200" alt="Screenshot 9: Doctor's View of Patient Records" />
+  <img src="interfaces/10.jpg" width="200" alt="Screenshot 10: Doctor Profile" />
+</p>
+
+## App Screenshots for Doctor
+Here are some screenshots demonstrating the application's interface for Doctor:
+
+<p align="center">
+  <img src="interfaces/11.jpg" width="200" alt="Screenshot 1: Login Screen" />
+  <img src="interfaces/12.jpg" width="200" alt="Screenshot 2: Registration Screen" />
+  <img src="interfaces/13.jpg" width="200" alt="Screenshot 3: Patient Dashboard" />
 </p>
 
 ## How to Run the Project
