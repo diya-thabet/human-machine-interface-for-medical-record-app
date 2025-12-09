@@ -12,6 +12,7 @@ import { i18n } from '../i18n';
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = React.useState('');
   const [email, setEmail] = React.useState('');
+  const [phoneNumber, setPhoneNumber] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [role, setRole] = React.useState('PATIENT');
   const [loading, setLoading] = React.useState(false);
@@ -41,6 +42,7 @@ const RegisterScreen = ({ navigation }) => {
         uid: user.uid,
         fullName: fullName,
         email: email,
+        phoneNumber: phoneNumber || '', // Save phone number
         role: role,
         createdAt: new Date().toISOString()
       });
@@ -84,6 +86,15 @@ const RegisterScreen = ({ navigation }) => {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder={i18n.t('phone_number') || "Phone Number"}
+            placeholderTextColor="#888"
+            keyboardType="phone-pad"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
           />
 
           <TextInput

@@ -197,6 +197,7 @@ const DoctorDashboardScreen = ({ navigation }) => {
         <View style={styles.headerText}>
           <Text style={styles.patientName}>{item.fullName || item.email}</Text>
           <Text style={styles.patientDetail}>{item.email}</Text>
+          {item.phoneNumber && <Text style={styles.patientDetail}>{item.phoneNumber}</Text>}
         </View>
       </View>
       <View style={styles.divider} />

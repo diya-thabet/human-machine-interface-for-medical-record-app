@@ -40,6 +40,22 @@ const ChatScreen = ({ navigation, route }) => {
         return unsubscribe;
     }, [conversationId]);
 
+    // Mark messages as read when entering the screen
+    useEffect(() => {
+        const markAsRead = async () => {
+            const q = query(
+                collection(db, `conversations/${conversationId}/messages`),
+                where('recipientId', '==', currentUser.uid),
+                where('read', '==', false)
+            );
+            const snapshot = await import('firebase/firestore').then(mod => mod.getDocs(q));
+            snapshot.forEach(async (doc) => {
+                await import('firebase/firestore').then(mod => mod.updateDoc(doc.ref, { read: true }));
+            });
+        };
+        markAsRead();
+    }, [conversationId]);
+
     const handleSend = async () => {
         if (!newMessage.trim()) return;
 
@@ -52,7 +68,8 @@ const ChatScreen = ({ navigation, route }) => {
                 createdAt: serverTimestamp(),
                 senderId: currentUser.uid,
                 senderName: currentUser.displayName || currentUser.email,
-                recipientId: recipientId
+                recipientId: recipientId,
+                read: false, // Mark as unread initially
             });
         } catch (error) {
             console.error("Error sending message:", error);

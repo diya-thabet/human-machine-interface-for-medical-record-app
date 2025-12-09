@@ -52,7 +52,8 @@ const translations = {
         no_patients: 'No patients assigned yet.',
         tap_plus_assign: 'Tap the + button to assign a patient by email.',
         view_records: 'Records',
-        assign_diet: 'Diet'
+        assign_diet: 'Diet',
+        phone_number: 'Phone Number'
     },
     fr: {
         login: 'Connexion',
