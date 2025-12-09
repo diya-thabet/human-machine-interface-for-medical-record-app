@@ -1,9 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Dimensions, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, Platform, KeyboardAvoidingView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../firebaseConfig';
+import { signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot, getDocs, updateDoc, arrayUnion, arrayRemove, doc } from 'firebase/firestore'; // Added arrayRemove
 import { i18n } from '../i18n';
 
@@ -15,6 +16,7 @@ const DoctorDashboardScreen = ({ navigation }) => {
   const [doctorName, setDoctorName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [searchEmail, setSearchEmail] = useState('');
+  const [searchText, setSearchText] = useState(''); // Added missing state
   const [assigning, setAssigning] = useState(false);
 
   // Force update
@@ -23,6 +25,11 @@ const DoctorDashboardScreen = ({ navigation }) => {
     const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
     return unsubscribe;
   }, []);
+
+  const filteredPatients = patients.filter(p =>
+    (p.fullName && p.fullName.toLowerCase().includes(searchText.toLowerCase())) ||
+    (p.email && p.email.toLowerCase().includes(searchText.toLowerCase()))
+  );
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -157,70 +164,112 @@ const DoctorDashboardScreen = ({ navigation }) => {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{i18n.t('welcome')}, Dr. {doctorName}</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={28} color="#2C3E50" />
+  const handleSignOut = async () => {
+    Alert.alert(
+      i18n.t('logout'),
+      i18n.t('confirm_logout'),
+      [
+        { text: i18n.t('cancel'), style: 'cancel' },
+        {
+          text: i18n.t('logout'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              navigation.replace('Login');
+            } catch (error) {
+              console.error("Error signing out:", error);
+              Alert.alert(i18n.t('error'), i18n.t('logout_failed'));
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  const renderPatientItem = ({ item }) => (
+    <View style={styles.patientCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{item.fullName ? item.fullName.charAt(0).toUpperCase() : '?'}</Text>
+        </View>
+        <View style={styles.headerText}>
+          <Text style={styles.patientName}>{item.fullName || item.email}</Text>
+          <Text style={styles.patientDetail}>{item.email}</Text>
+        </View>
+      </View>
+      <View style={styles.divider} />
+      <View style={styles.cardActions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleViewPatientRecords(item.id, item.fullName)}>
+          <Ionicons name="document-text-outline" size={20} color="#00BCD4" />
+          <Text style={styles.actionLabel}>{i18n.t('view_records')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleAssignDiet(item)}>
+          <Ionicons name="nutrition-outline" size={20} color="#4CAF50" />
+          <Text style={styles.actionLabel}>{i18n.t('assign_diet')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleRemovePatient(item.id, item.fullName)}>
+          <Ionicons name="person-remove-outline" size={20} color="#FF6347" />
+          <Text style={styles.actionLabel}>{i18n.t('remove')}</Text>
         </TouchableOpacity>
       </View>
+    </View>
+  );
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <Text style={styles.sectionTitle}>{i18n.t('my_patients')}</Text>
-        {loading ? (
-          <ActivityIndicator size="large" color="#00BCD4" />
-        ) : patients.length === 0 ? (
-          <View style={styles.emptyStateContainer}>
-            <Ionicons name="people-outline" size={60} color="#DDD" />
-            <Text style={styles.noDataText}>{i18n.t('no_patients') || "No patients assigned yet."}</Text>
-            <Text style={styles.subText}>{i18n.t('tap_plus_assign') || "Tap the + button to assign a patient by email."}</Text>
-          </View>
-        ) : (
-          <View style={styles.patientList}>
-            {patients.map(patient => (
-              <View key={patient.id} style={styles.patientCard}>
-                <TouchableOpacity
-                  style={styles.patientInfo}
-                  onPress={() => handleViewPatientRecords(patient.id, patient.fullName || patient.email)}
-                >
-                  <Ionicons name="person-circle-outline" size={40} color="#00BCD4" />
-                  <View style={styles.patientTextContainer}>
-                    <Text style={styles.patientName}>{patient.fullName || patient.email}</Text>
-                    <Text style={styles.patientDetail}>Email: {patient.email}</Text>
-                    <Text style={styles.patientDetail}>Status: Active</Text>
-                  </View>
-                </TouchableOpacity>
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Top Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>{i18n.t('welcome')}, Dr. {doctorName}</Text>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => navigation.navigate('DoctorProfile')} style={styles.iconButton}>
+            <Ionicons name="person-circle-outline" size={30} color="#00BCD4" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSignOut} style={styles.iconButton}>
+            <Ionicons name="log-out-outline" size={26} color="#333" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('Chat', { recipientId: patient.id, recipientName: patient.fullName || patient.email })}
-                  >
-                    <Ionicons name="chatbubble-ellipses-outline" size={24} color="#4CAF50" />
-                  </TouchableOpacity>
+      {/* Search Bar - Fixed at top */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search patients..."
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholderTextColor="#999"
+        />
+      </View>
 
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleAssignDiet(patient)}
-                  >
-                    <Ionicons name="nutrition-outline" size={24} color="#00BCD4" />
-                  </TouchableOpacity>
+      {/* Divider / Section Title */}
+      <Text style={styles.sectionTitle}>{i18n.t('my_patients')}</Text>
 
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleRemovePatient(patient.id, patient.fullName)}
-                  >
-                    <Ionicons name="trash-outline" size={24} color="#F44336" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+      {/* Main Content */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#00BCD4" style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={filteredPatients}
+          renderItem={renderPatientItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={50} color="#DDD" />
+              <Text style={styles.noDataText}>
+                {searchText ? "No patients match your search." : i18n.t('no_patients') || "No patients assigned yet."}
+              </Text>
+              {!searchText && <Text style={styles.subText}>{i18n.t('tap_plus_assign') || "Tap the + button to assign a patient by email."}</Text>}
+            </View>
+          }
+        />
+      )}
 
-      {/* Floating Action Button for adding new patient */}
+      {/* Floating Action Buttons */}
       <View style={styles.fabContainer}>
         <TouchableOpacity style={styles.fabSecondary} onPress={() => navigation.navigate('DoctorAppointments')}>
           <Ionicons name="calendar-outline" size={28} color="#FFFFFF" />
@@ -274,7 +323,7 @@ const DoctorDashboardScreen = ({ navigation }) => {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Bottom Tab Navigation (Doctor's) */}
+      {/* Bottom Tab Navigation */}
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={goToPatients}>
           <Ionicons name="people-outline" size={24} color="#00BCD4" />
@@ -327,23 +376,47 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     marginBottom: 20,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2
+  },
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, height: 45, fontSize: 16 },
+  headerIcons: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: { marginLeft: 15 },
   patientList: {
     width: '100%',
   },
   patientCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    elevation: 5,
+    borderRadius: 12,
+    marginVertical: 8,
+    marginHorizontal: 4, // for shadow visibility
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    overflow: 'hidden'
   },
+  cardHeader: {
+    flexDirection: 'row',
+    padding: 15,
+    alignItems: 'center'
+  },
+  avatar: {
+    width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0F7FA',
+    justifyContent: 'center', alignItems: 'center', marginRight: 15
+  },
+  avatarText: { fontSize: 20, fontWeight: 'bold', color: '#00BCD4' },
+  headerText: { flex: 1 },
   patientInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -356,12 +429,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
   },
   patientDetail: {
     fontSize: 14,
     color: '#666',
+    marginTop: 2
   },
+  divider: { height: 1, backgroundColor: '#EEE', width: '100%' },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    backgroundColor: '#F9FAFB'
+  },
+  actionBtn: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 8, // Reduced padding
+    justifyContent: 'center',
+    flex: 1, // Distribute space evenly
+  },
+  actionLabel: {
+    marginLeft: 4,
+    fontSize: 13, // Slightly smaller font
+    color: '#555',
+    fontWeight: '500',
+    flexShrink: 1, // Allow text to shrink/wrap if needed
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  emptyContainer: { alignItems: 'center', marginTop: 50 },
   fabContainer: {
     position: 'absolute',
     right: 25,

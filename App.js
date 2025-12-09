@@ -1,8 +1,12 @@
 
 // App.js
-import * as React from 'react';
+import React, { useEffect, useState } from 'react'; // Added useState, useEffect
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { onAuthStateChanged } from 'firebase/auth'; // Import auth listener
+import { auth, db } from './firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { ActivityIndicator, View } from 'react-native'; // Import loading UI
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { i18n } from './i18n'; // Import i18n
 
@@ -34,6 +38,8 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [isI18nInitialized, setIsI18nInitialized] = React.useState(false);
+  const [initialRoute, setInitialRoute] = useState('Login');
+  const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
     const loadLanguage = async () => {
@@ -43,12 +49,44 @@ export default function App() {
     loadLanguage();
   }, []);
 
-  if (!isI18nInitialized) return null; // Or a splash screen
+  React.useEffect(() => {
+    if (!isI18nInitialized) return; // Wait for i18n to initialize
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const role = userDoc.data().role;
+            setInitialRoute(role === 'DOCTOR' ? 'DoctorDashboard' : 'PatientDashboard');
+          } else {
+            setInitialRoute('PatientDashboard'); // Default
+          }
+        } catch (e) {
+          console.error("Error fetching user role:", e);
+          setInitialRoute('Login');
+        }
+      } else {
+        setInitialRoute('Login');
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [isI18nInitialized]); // Re-run when i18n is initialized
+
+  if (loading || !isI18nInitialized) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00BCD4" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Login">
+        <Stack.Navigator initialRouteName={initialRoute}>
           <Stack.Screen
             name="Login"
             component={LoginScreen}

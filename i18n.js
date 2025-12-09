@@ -46,7 +46,13 @@ const translations = {
         spike_analysis: 'Spike Analysis',
         normal: 'Normal',
         high: 'High',
-        low: 'Low'
+        low: 'Low',
+        confirm_logout: 'Are you sure you want to logout?',
+        logout_failed: 'Failed to logout. Please try again.',
+        no_patients: 'No patients assigned yet.',
+        tap_plus_assign: 'Tap the + button to assign a patient by email.',
+        view_records: 'Records',
+        assign_diet: 'Diet'
     },
     fr: {
         login: 'Connexion',
@@ -91,7 +97,13 @@ const translations = {
         spike_analysis: 'Analyse des pics',
         normal: 'Normal',
         high: 'Élevé',
-        low: 'Bas'
+        low: 'Bas',
+        confirm_logout: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+        logout_failed: 'Échec de la déconnexion. Veuillez réessayer.',
+        no_patients: 'Aucun patient assigné pour le moment.',
+        tap_plus_assign: "Appuyez sur le bouton + pour assigner un patient par email.",
+        view_records: 'Dossiers',
+        assign_diet: 'Régime'
     },
     ar: {
         login: 'تسجيل الدخول',
@@ -136,8 +148,14 @@ const translations = {
         spike_analysis: 'تحليل الارتفاعات',
         normal: 'طبيعي',
         high: 'مرتفع',
-        low: 'منخفض'
-    }
+        low: 'منخفض',
+        confirm_logout: 'هل أنت متأكد أنك تريد تسجيل الخروج؟',
+        logout_failed: 'فشل تسجيل الخروج. يرجى المحاولة مرة أخرى.',
+        no_patients: 'لم يتم تعيين مرضى بعد.',
+        tap_plus_assign: 'اضغط على زر + لتعيين مريض عبر البريد الإلكتروني.',
+        view_records: 'سجلات',
+        assign_diet: 'حمية'
+    },
 };
 
 class I18n {
