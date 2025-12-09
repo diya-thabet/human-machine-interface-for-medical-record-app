@@ -311,8 +311,8 @@ const styles = StyleSheet.create({
     height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    right: 25,
-    bottom: Platform.OS === 'ios' ? 100 : 120, // Adjusted: Increased from 105 to 120 for Android
+    right: 30,
+    bottom: Platform.OS === 'ios' ? 140 : 160, // Lifted
     backgroundColor: '#00BCD4',
     borderRadius: 30,
     elevation: 8,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   fabSecondary: {
-    bottom: Platform.OS === 'ios' ? 170 : 190, // Above the Add Record FAB
+    bottom: Platform.OS === 'ios' ? 210 : 230, // Above the Add Record FAB (140 + 70)
     backgroundColor: '#9C27B0', // different color for distinction
   },
   tabBar: {

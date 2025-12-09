@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../firebaseConfig';
-import { collection, query, where, limit, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, orderBy, onSnapshot, doc } from 'firebase/firestore';
 
 import { i18n } from '../i18n';
 
@@ -15,6 +15,7 @@ const PatientDashboardScreen = ({ navigation }) => {
   const [patientName, setPatientName] = useState('Patient');
   const [recentRecords, setRecentRecords] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [assignedDoctorIds, setAssignedDoctorIds] = useState([]); // New State
   const [loading, setLoading] = useState(true);
 
   // Force update
@@ -34,6 +35,16 @@ const PatientDashboardScreen = ({ navigation }) => {
       navigation.navigate('Login');
       return;
     }
+
+    // Fetch User Data (to get assignedDoctorIds)
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setPatientName(data.fullName || user.displayName || 'Patient');
+        setAssignedDoctorIds(data.assignedDoctorIds || []);
+      }
+    });
 
     // Fetch Records
     const recordsQuery = query(
@@ -83,6 +94,7 @@ const PatientDashboardScreen = ({ navigation }) => {
     });
 
     return () => {
+      unsubscribeUser();
       unsubscribeRecords();
       unsubscribeAppointments();
     };
@@ -148,11 +160,21 @@ const PatientDashboardScreen = ({ navigation }) => {
               <Text style={styles.actionText}>{i18n.t('upcoming_appointments') || 'Appt.'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Chat', { recipientId: auth.currentUser?.assignedDoctorIds?.[0] || 'support', recipientName: 'My Doctor' })}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="chatbubble-ellipses" size={32} color="#4CAF50" />
+            <TouchableOpacity
+              style={[styles.actionCard, assignedDoctorIds.length === 0 && styles.disabledActionCard]}
+              onPress={() => {
+                if (assignedDoctorIds.length > 0) {
+                  navigation.navigate('Chat', { recipientId: assignedDoctorIds[0], recipientName: 'My Doctor' });
+                } else {
+                  alert(i18n.t('error') + ": You must have an assigned doctor to chat.");
+                }
+              }}
+              disabled={assignedDoctorIds.length === 0}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: assignedDoctorIds.length > 0 ? '#E8F5E9' : '#EEE' }]}>
+                <Ionicons name="chatbubble-ellipses" size={32} color={assignedDoctorIds.length > 0 ? "#4CAF50" : "#999"} />
               </View>
-              <Text style={styles.actionText}>{i18n.t('chat') || 'Chat'}</Text>
+              <Text style={[styles.actionText, assignedDoctorIds.length === 0 && { color: '#999' }]}>{i18n.t('chat') || 'Chat'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('PatientDiet')}>
@@ -324,6 +346,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+  },
+  disabledActionCard: {
+    opacity: 0.6,
   },
   iconContainer: {
     width: 60,

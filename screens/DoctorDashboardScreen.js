@@ -132,7 +132,16 @@ const DoctorDashboardScreen = ({ navigation }) => {
       }
 
       // 3. Assign doctor to patient
-      await updateDoc(doc(db, "users", patientId), {
+      const userRef = doc(db, "users", patientId);
+
+      // Strict Single Doctor Rule: Check if already assigned to *any* doctor
+      if (patientData.assignedDoctorIds && patientData.assignedDoctorIds.length > 0) {
+        Alert.alert(i18n.t('error'), "This patient is already assigned to a doctor. They must be removed from their current doctor first.");
+        setAssigning(false);
+        return;
+      }
+
+      await updateDoc(userRef, {
         assignedDoctorIds: arrayUnion(auth.currentUser.uid)
       });
 
@@ -356,7 +365,7 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: 25,
-    bottom: Platform.OS === 'ios' ? 100 : 120,
+    bottom: Platform.OS === 'ios' ? 140 : 160, // Lifted up to avoid bottom menu interference
     alignItems: 'center',
     zIndex: 10,
   },

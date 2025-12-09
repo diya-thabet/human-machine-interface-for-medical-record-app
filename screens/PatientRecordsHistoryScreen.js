@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     right: 25,
-    bottom: Platform.OS === 'ios' ? 100 : 120, // Adjusted: Increased from 105 to 120 for Android
+    bottom: Platform.OS === 'ios' ? 140 : 160, // Lifted for better visibility
     backgroundColor: '#00BCD4',
     borderRadius: 30,
     elevation: 8,
