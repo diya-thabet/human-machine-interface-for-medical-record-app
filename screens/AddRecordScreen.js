@@ -1,11 +1,16 @@
 // screens/AddRecordScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { db, auth } from '../firebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
 
 const AddRecordScreen = ({ navigation, route }) => {
-  const { patientId, patientName } = route.params || { patientId: 'unknown', patientName: 'Unknown Patient' };
+  // If coming from Doctor dashboard, we might have patientId. 
+  // If coming from Patient dashboard, we use auth.currentUser.uid
+  const { patientId: paramPatientId, patientName } = route.params || {};
 
   const [glucoseLevel, setGlucoseLevel] = useState('');
   const [bloodPressure, setBloodPressure] = useState('');
@@ -13,6 +18,7 @@ const AddRecordScreen = ({ navigation, route }) => {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const onDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -26,15 +32,42 @@ const AddRecordScreen = ({ navigation, route }) => {
     setDate(currentTime);
   };
 
-  const handleSaveRecord = () => {
-    console.log('Saving record for:', patientName, {
-      patientId,
-      glucoseLevel,
-      bloodPressure,
-      weight,
-      date: date.toISOString(),
-    });
-    navigation.goBack();
+  const handleSaveRecord = async () => {
+    const targetPatientId = paramPatientId || auth.currentUser?.uid;
+
+    if (!targetPatientId) {
+      Alert.alert("Error", "No patient identified. Please login again.");
+      return;
+    }
+
+    if (!glucoseLevel && !bloodPressure && !weight) {
+      Alert.alert("Error", "Please enter at least one health metric.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await addDoc(collection(db, "records"), {
+        patientId: targetPatientId,
+        patientName: patientName || auth.currentUser?.displayName || 'Unknown', // Fallback
+        glucoseLevel: glucoseLevel || null,
+        bloodPressure: bloodPressure || null,
+        weight: weight || null,
+        date: date.toISOString(),
+        createdAt: new Date().toISOString()
+      });
+
+      console.log('Record saved successfully');
+      Alert.alert("Success", "Record added successfully!", [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
+
+    } catch (error) {
+      console.error("Error adding record: ", error);
+      Alert.alert("Error", "Failed to save record: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formattedDate = date.toLocaleDateString('en-US', {
@@ -58,7 +91,7 @@ const AddRecordScreen = ({ navigation, route }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color="#2C3E50" />
           </TouchableOpacity>
-          <Text style={styles.title}>Add New Record for {patientName}</Text>
+          <Text style={styles.title}>Add Record {patientName ? `for ${patientName}` : ''}</Text>
           <View style={{ width: 28 }} />
         </View>
 
@@ -121,8 +154,12 @@ const AddRecordScreen = ({ navigation, route }) => {
             />
           )}
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveRecord}>
-            <Text style={styles.saveButtonText}>SAVE RECORD</Text>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveRecord} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.saveButtonText}>SAVE RECORD</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

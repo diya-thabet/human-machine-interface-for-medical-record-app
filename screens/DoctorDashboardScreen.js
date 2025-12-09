@@ -1,40 +1,121 @@
+
 // screens/DoctorDashboardScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Dimensions, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { db, auth } from '../firebaseConfig';
+import { collection, query, where, onSnapshot, getDocs, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
-// Dummy data for patients
-const DUMMY_PATIENTS = [
-  { id: '1', name: 'Alice Johnson', lastVisit: 'Aug 28, 2025', status: 'Stable', details: 'Regular check-up' },
-  { id: '2', name: 'Bob Williams', lastVisit: 'Aug 27, 2025', status: 'Follow-up', details: 'Post-op review' },
-  { id: '3', name: 'Charlie Brown', lastVisit: 'Aug 26, 2025', status: 'New Patient', details: 'Initial consultation' },
-  { id: '4', name: 'Diana Prince', lastVisit: 'Aug 25, 2025', status: 'Improving', details: 'Diabetes management' },
-  { id: '5', name: 'Eve Adams', lastVisit: 'Aug 24, 2025', status: 'Critical', details: 'Urgent care' },
-  { id: '6', name: 'Frank White', lastVisit: 'Aug 23, 2025', status: 'Stable', details: 'Annual physical' },
-  { id: '7', name: 'Grace Hall', lastVisit: 'Aug 22, 2025', status: 'Stable', details: 'Vaccination' },
-];
-
 const DoctorDashboardScreen = ({ navigation }) => {
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [doctorName, setDoctorName] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchEmail, setSearchEmail] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setDoctorName(user.displayName || user.email?.split('@')[0] || 'Doctor');
+    } else {
+      // Handle case where user might not be logged in or auth is initializing
+      return;
+    }
+
+    // Query patients assigned to this doctor
+    // We assume patients have an 'assignedDoctorIds' array field
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "PATIENT"),
+      where("assignedDoctorIds", "array-contains", user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedPatients = [];
+      querySnapshot.forEach((doc) => {
+        fetchedPatients.push({ id: doc.id, ...doc.data() });
+      });
+      setPatients(fetchedPatients);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching patients: ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const goToPatients = () => { /* Already on Patients tab */ };
-  const goToMyProfile = () => navigation.navigate('DoctorProfile'); // Navigates to DoctorProfileScreen
+  const goToMyProfile = () => navigation.navigate('DoctorProfile');
 
   const handleViewPatientRecords = (patientId, patientName) => {
     navigation.navigate('ViewPatientAddRecord', { patientId, patientName });
   };
 
   const handleAddPatient = () => {
-    console.log("Navigate to Add New Patient screen");
-    // navigation.navigate('AddPatient'); // You would create an AddPatientScreen
+    setModalVisible(true);
+  };
+
+  const assignPatient = async () => {
+    if (!searchEmail) {
+      Alert.alert("Error", "Please enter an email address.");
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      // 1. Find the patient by email
+      const q = query(
+        collection(db, "users"),
+        where("email", "==", searchEmail.trim().toLowerCase()),
+        where("role", "==", "PATIENT")
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        Alert.alert("Not Found", "No patient found with this email.");
+        setAssigning(false);
+        return;
+      }
+
+      const patientDoc = querySnapshot.docs[0];
+      const patientId = patientDoc.id;
+      const patientData = patientDoc.data();
+
+      // 2. Check if already assigned
+      if (patientData.assignedDoctorIds && patientData.assignedDoctorIds.includes(auth.currentUser.uid)) {
+        Alert.alert("Info", "This patient is already assigned to you.");
+        setAssigning(false);
+        setModalVisible(false);
+        setSearchEmail('');
+        return;
+      }
+
+      // 3. Assign doctor to patient
+      await updateDoc(doc(db, "users", patientId), {
+        assignedDoctorIds: arrayUnion(auth.currentUser.uid)
+      });
+
+      Alert.alert("Success", "Patient " + (patientData.fullName || searchEmail) + " assigned successfully!");
+      setModalVisible(false);
+      setSearchEmail('');
+
+    } catch (error) {
+      console.error("Error assigning patient:", error);
+      Alert.alert("Error", "Failed to assign patient. " + error.message);
+    } finally {
+      setAssigning(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Doctor Dashboard</Text>
+        <Text style={styles.title}>Welcome, Dr. {doctorName}</Text>
         <TouchableOpacity onPress={() => console.log('Doctor Settings')} style={styles.settingsButton}>
           <Ionicons name="settings-outline" size={28} color="#2C3E50" />
         </TouchableOpacity>
@@ -42,31 +123,85 @@ const DoctorDashboardScreen = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Text style={styles.sectionTitle}>My Patients</Text>
-        <View style={styles.patientList}>
-          {DUMMY_PATIENTS.map(patient => (
-            <TouchableOpacity
-              key={patient.id}
-              style={styles.patientCard}
-              onPress={() => handleViewPatientRecords(patient.id, patient.name)}
-            >
-              <View style={styles.patientInfo}>
-                <Ionicons name="person-circle-outline" size={40} color="#00BCD4" />
-                <View style={styles.patientTextContainer}>
-                  <Text style={styles.patientName}>{patient.name}</Text>
-                  <Text style={styles.patientDetail}>Last Visit: {patient.lastVisit}</Text>
-                  <Text style={styles.patientDetail}>Status: {patient.status}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#00BCD4" />
+        ) : patients.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <Ionicons name="people-outline" size={60} color="#DDD" />
+            <Text style={styles.noDataText}>No patients assigned yet.</Text>
+            <Text style={styles.subText}>Tap the + button to assign a patient by email.</Text>
+          </View>
+        ) : (
+          <View style={styles.patientList}>
+            {patients.map(patient => (
+              <TouchableOpacity
+                key={patient.id}
+                style={styles.patientCard}
+                onPress={() => handleViewPatientRecords(patient.id, patient.fullName || patient.email)}
+              >
+                <View style={styles.patientInfo}>
+                  <Ionicons name="person-circle-outline" size={40} color="#00BCD4" />
+                  <View style={styles.patientTextContainer}>
+                    <Text style={styles.patientName}>{patient.fullName || patient.email}</Text>
+                    <Text style={styles.patientDetail}>Email: {patient.email}</Text>
+                    <Text style={styles.patientDetail}>Status: Active</Text>
+                  </View>
                 </View>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={24} color="#888" />
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Ionicons name="chevron-forward-outline" size={24} color="#888" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Action Button for adding new patient */}
       <TouchableOpacity style={styles.fab} onPress={handleAddPatient}>
-        <Ionicons name="person-add-outline" size={35} color="#FFFFFF" />
+        <Ionicons name="person-add-outline" size={30} color="#FFFFFF" />
       </TouchableOpacity>
+
+      {/* Assign Patient Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.centeredView}
+        >
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>Assign Existing Patient</Text>
+            <Text style={styles.modalSubText}>Enter the patient's email address to add them to your list.</Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Patient Email"
+              placeholderTextColor="#999"
+              value={searchEmail}
+              onChangeText={setSearchEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonClose]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.textStyle}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonAssign]}
+                onPress={assignPatient}
+                disabled={assigning}
+              >
+                {assigning ? <ActivityIndicator color="#FFF" /> : <Text style={styles.textStyle}>Assign</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Bottom Tab Navigation (Doctor's) */}
       <View style={styles.tabBar}>
@@ -100,7 +235,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   title: {
-    fontSize: 26,
+    fontSize: 22, // Slightly reduced to fit longer names
     fontWeight: 'bold',
     color: '#2C3E50',
     flex: 1,
@@ -200,6 +335,92 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 5,
   },
+  // Modal Styles
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalView: {
+    width: '85%',
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 25,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  modalText: {
+    marginBottom: 10,
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+  },
+  modalSubText: {
+    marginBottom: 20,
+    textAlign: "center",
+    color: '#666',
+  },
+  modalInput: {
+    width: '100%',
+    height: 50,
+    borderColor: '#E0E0E0',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  button: {
+    borderRadius: 10,
+    padding: 12,
+    elevation: 2,
+    width: '45%',
+    alignItems: 'center',
+  },
+  buttonClose: {
+    backgroundColor: "#FF5252",
+  },
+  buttonAssign: {
+    backgroundColor: "#00BCD4",
+  },
+  textStyle: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+    fontSize: 16,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#555',
+    fontSize: 18,
+    marginTop: 10,
+    fontWeight: 'bold',
+  },
+  subText: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: 14,
+    marginTop: 5,
+  }
 });
 
 export default DoctorDashboardScreen;

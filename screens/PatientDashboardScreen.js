@@ -1,110 +1,234 @@
+
 // screens/PatientDashboardScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '../firebaseConfig';
+import { collection, query, where, limit, orderBy, onSnapshot } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
-// Dummy data for upcoming appointments
-const DUMMY_APPOINTMENTS = [
-  { id: '1', doctor: 'Dr. Jane Smith', time: '10:00 AM', date: 'Sept 1, 2025', type: 'Follow-up' },
-  { id: '2', doctor: 'Dr. John Doe', time: '02:30 PM', date: 'Sept 3, 2025', type: 'Consultation' },
-];
-
-// Dummy data for recent health metrics
-const DUMMY_METRICS = [
-  { id: 'm1', label: 'Glucose', value: '120 mg/dL', trend: 'up', icon: 'thermometer-outline' },
-  { id: 'm2', label: 'Blood Pressure', value: '120/80 mmHg', trend: 'stable', icon: 'heart-outline' },
-  { id: 'm3', label: 'Weight', value: '75 kg', trend: 'down', icon: 'fitness-outline' },
-];
-
 const PatientDashboardScreen = ({ navigation }) => {
+  const [patientName, setPatientName] = useState('Patient');
+  const [recentRecords, setRecentRecords] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const goToHome = () => { /* Already on Home */ };
-  const goToMyRecords = () => navigation.navigate('PatientRecordsHistory');
-  // FIX: This line is updated to navigate to PatientProfile
-  const goToMyProfile = () => navigation.navigate('PatientProfile');
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setPatientName(user.displayName || user.email?.split('@')[0]);
+    }
+
+    if (!user) {
+      navigation.navigate('Login');
+      return;
+    }
+
+    // Fetch Records
+    const recordsQuery = query(
+      collection(db, "records"),
+      where("patientId", "==", user.uid)
+      // orderBy("date", "desc"), // Removed to bypass index
+      // limit(3) // Removed limit to allow client-side sort
+    );
+
+    const unsubscribeRecords = onSnapshot(recordsQuery, (querySnapshot) => {
+      const records = [];
+      querySnapshot.forEach((doc) => {
+        records.push({ id: doc.id, ...doc.data() });
+      });
+      // Client-side sort and limit
+      records.sort((a, b) => new Date(b.date) - new Date(a.date));
+      const recent = records.slice(0, 3);
+
+      setRecentRecords(recent);
+      // setLoading(false); 
+    }, (error) => {
+      console.error("Error fetching records:", error);
+      // setLoading(false);
+    });
+
+    // Fetch Appointments
+    // Assuming appointments have 'patientId' and 'date'
+    const appointmentsQuery = query(
+      collection(db, "appointments"),
+      where("patientId", "==", user.uid)
+      // orderBy("date", "asc") // Removed to bypass index
+    );
+
+    const unsubscribeAppointments = onSnapshot(appointmentsQuery, (querySnapshot) => {
+      const fetchedAppointments = [];
+      querySnapshot.forEach((doc) => {
+        fetchedAppointments.push({ id: doc.id, ...doc.data() });
+      });
+      // Client-side sort
+      fetchedAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setAppointments(fetchedAppointments);
+      setLoading(false); // Set loading to false after both are fetched
+    }, (error) => {
+      console.error("Error fetching appointments:", error);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeRecords();
+      unsubscribeAppointments();
+    };
+  }, []);
+
+  const handleSignOut = () => {
+    auth.signOut()
+      .then(() => navigation.replace('Login'))
+      .catch(error => alert(error.message));
+  };
+
+  const goToAddRecord = () => {
+    navigation.navigate('AddRecord', { patientId: auth.currentUser?.uid, patientName: patientName });
+  };
+
+  const goToHistory = () => {
+    navigation.navigate('PatientRecordsHistory');
+  };
+
+  const formatDate = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.title}>Hello, John!</Text>
-        <TouchableOpacity onPress={() => console.log('Notifications pressed')} style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={28} color="#2C3E50" />
+        <View>
+          <Text style={styles.greetingText}>Hello,</Text>
+          <Text style={styles.userNameText}>{patientName}!</Text>
+        </View>
+        <TouchableOpacity onPress={handleSignOut} style={styles.profileIcon}>
+          <Ionicons name="log-out-outline" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {/* Quick Access Card */}
-        <View style={styles.quickAccessCard}>
-          <Text style={styles.cardTitle}>Quick Actions</Text>
-          <View style={styles.quickAccessButtons}>
-            <TouchableOpacity style={styles.quickActionButton} onPress={goToMyRecords}>
-              <Ionicons name="stats-chart-outline" size={30} color="#00BCD4" />
-              <Text style={styles.quickActionButtonText}>My Records</Text>
+      <ScrollView contentContainerStyle={styles.scrollViewContent} showsVerticalScrollIndicator={false}>
+
+        {/* Quick Actions */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsGrid}>
+            <TouchableOpacity style={styles.actionCard} onPress={goToAddRecord}>
+              <View style={[styles.iconContainer, { backgroundColor: '#E0F7FA' }]}>
+                <Ionicons name="add-circle" size={32} color="#00BCD4" />
+              </View>
+              <Text style={styles.actionText}>Add Record</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate('AddRecord')}>
-              <Ionicons name="add-circle-outline" size={30} color="#00BCD4" />
-              <Text style={styles.quickActionButtonText}>Add Record</Text>
+
+            <TouchableOpacity style={styles.actionCard} onPress={goToHistory}>
+              <View style={[styles.iconContainer, { backgroundColor: '#E3F2FD' }]}>
+                <Ionicons name="time" size={32} color="#2196F3" />
+              </View>
+              <Text style={styles.actionText}>History</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionButton} onPress={() => console.log('Request Appointment')}>
-              <Ionicons name="calendar-outline" size={30} color="#00BCD4" />
-              <Text style={styles.quickActionButtonText}>Appointment</Text>
+
+            <TouchableOpacity style={styles.actionCard}>
+              <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
+                <Ionicons name="calendar" size={32} color="#9C27B0" />
+              </View>
+              <Text style={styles.actionText}>Appointments</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionCard}>
+              <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
+                <Ionicons name="nutrition" size={32} color="#FF9800" />
+              </View>
+              <Text style={styles.actionText}>Diet Plan</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Upcoming Appointments Section */}
-        <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-          {DUMMY_APPOINTMENTS.map(appointment => (
-            <View key={appointment.id} style={styles.appointmentCard}>
-              <Text style={styles.appointmentDate}>{appointment.date}</Text>
-              <Text style={styles.appointmentTime}>{appointment.time}</Text>
-              <Text style={styles.appointmentDoctor}>with {appointment.doctor}</Text>
-              <Text style={styles.appointmentType}>{appointment.type}</Text>
-              <TouchableOpacity style={styles.detailsButton}>
-                <Text style={styles.detailsButtonText}>View Details</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
+        {/* Upcoming Appointments */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+            <TouchableOpacity><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
+          </View>
 
-        {/* Recent Health Metrics Section */}
-        <Text style={styles.sectionTitle}>Recent Health Metrics</Text>
-        <View style={styles.metricsGrid}>
-          {DUMMY_METRICS.map(metric => (
-            <View key={metric.id} style={styles.metricCard}>
-              <Ionicons name={metric.icon} size={30} color="#00BCD4" />
-              <Text style={styles.metricLabel}>{metric.label}</Text>
-              <Text style={styles.metricValue}>{metric.value}</Text>
-              <View style={styles.trendContainer}>
-                <Ionicons
-                  name={metric.trend === 'up' ? 'arrow-up-circle-outline' : metric.trend === 'down' ? 'arrow-down-circle-outline' : 'remove-circle-outline'}
-                  size={16}
-                  color={metric.trend === 'up' ? '#E74C3C' : metric.trend === 'down' ? '#2ECC71' : '#888'}
-                />
-                <Text style={[styles.trendText, { color: metric.trend === 'up' ? '#E74C3C' : metric.trend === 'down' ? '#2ECC71' : '#888' }]}>
-                  {metric.trend.charAt(0).toUpperCase() + metric.trend.slice(1)}
-                </Text>
-              </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#00BCD4" />
+          ) : appointments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={40} color="#CCC" />
+              <Text style={styles.emptyStateText}>No upcoming appointments.</Text>
             </View>
-          ))}
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {appointments.map((apt) => (
+                <View key={apt.id} style={styles.appointmentCard}>
+                  <View style={styles.appointmentDateBox}>
+                    <Text style={styles.appointmentDateDay}>{new Date(apt.date).getDate()}</Text>
+                    <Text style={styles.appointmentDateMonth}>{new Date(apt.date).toLocaleString('default', { month: 'short' })}</Text>
+                  </View>
+                  <View style={styles.appointmentDetails}>
+                    <Text style={styles.doctorName}>Dr. {apt.doctorName || 'Unknown'}</Text>
+                    <Text style={styles.appointmentType}>{apt.type || 'Checkup'}</Text>
+                    <View style={styles.timeContainer}>
+                      <Ionicons name="time-outline" size={14} color="#666" />
+                      <Text style={styles.timeText}>{new Date(apt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
+
+        {/* Recent Health Metrics */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Recent Record Updates</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#00BCD4" />
+          ) : recentRecords.length === 0 ? (
+            <Text style={styles.noDataText}>No records added yet.</Text>
+          ) : (
+            recentRecords.map(record => (
+              <View key={record.id} style={styles.metricCard}>
+                <View style={styles.metricHeader}>
+                  <Text style={styles.metricDate}>{formatDate(record.date)}</Text>
+                </View>
+                <View style={styles.metricRow}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Glucose</Text>
+                    <Text style={styles.metricValue}>{record.glucoseLevel || '--'}</Text>
+                    <Text style={styles.metricUnit}>mg/dL</Text>
+                  </View>
+                  {/* Divider */}
+                  <View style={styles.verticalDivider} />
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Weight</Text>
+                    <Text style={styles.metricValue}>{record.weight || '--'}</Text>
+                    <Text style={styles.metricUnit}>kg</Text>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
       </ScrollView>
 
       {/* Bottom Tab Navigation */}
       <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={goToHome}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => { /* Already on Home */ }}>
           <Ionicons name="home-outline" size={24} color="#00BCD4" />
           <Text style={styles.tabTextActive}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={goToMyRecords}>
+        <TouchableOpacity style={styles.tabItem} onPress={goToHistory}>
           <Ionicons name="stats-chart-outline" size={24} color="#888" />
           <Text style={styles.tabText}>My Records</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={goToMyProfile}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('PatientProfile')}>
           <Ionicons name="person-outline" size={24} color="#888" />
           <Text style={styles.tabText}>My Profile</Text>
         </TouchableOpacity>
@@ -123,151 +247,208 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 0 : 10,
-    paddingBottom: 15,
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingBottom: 20,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#F0F0F0',
   },
-  title: {
-    fontSize: 26,
+  greetingText: {
+    fontSize: 16,
+    color: '#757575',
+  },
+  userNameText: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2C3E50',
   },
-  notificationButton: {
+  profileIcon: {
     padding: 5,
   },
   scrollViewContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingBottom: 80,
+  },
+  sectionContainer: {
     paddingHorizontal: 20,
-  },
-  quickAccessCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 30,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  quickAccessButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  quickActionButton: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  quickActionButtonText: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 5,
-    fontWeight: '500',
+    marginTop: 25,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 20,
-  },
-  horizontalScroll: {
-    paddingRight: 20, // Add some padding to the end of the scroll view
-    marginBottom: 30,
-  },
-  appointmentCard: {
-    backgroundColor: '#E0F7FA', // Light blue background
-    borderRadius: 15,
-    padding: 15,
-    marginRight: 15,
-    width: Dimensions.get('window').width * 0.7, // Take up 70% of screen width
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  appointmentDate: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#00BCD4',
-    marginBottom: 5,
-  },
-  appointmentTime: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2C3E50',
-    marginBottom: 5,
+    marginBottom: 15,
   },
-  appointmentDoctor: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 10,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
-  appointmentType: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    color: '#777',
-    marginBottom: 10,
+  seeAllText: {
+    color: '#00BCD4',
+    fontWeight: '600',
   },
-  detailsButton: {
-    backgroundColor: '#00BCD4',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  detailsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  metricsGrid: {
+  quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 20,
   },
-  metricCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 15,
-    width: (width / 2) - 30, // Approx half screen width minus padding
-    marginBottom: 15,
+  actionCard: {
+    width: '23%',
     alignItems: 'center',
-    elevation: 3,
+    marginBottom: 10,
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
   },
-  metricLabel: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 5,
-  },
-  metricValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  actionText: {
+    fontSize: 12,
     color: '#333',
-    marginVertical: 5,
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  trendContainer: {
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#EEE',
+    borderStyle: 'dashed',
+  },
+  emptyStateText: {
+    color: '#BBB',
+    marginTop: 10,
+    fontSize: 14,
+  },
+  horizontalScroll: {
+    paddingBottom: 10,
+  },
+  appointmentCard: {
     flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 15,
+    marginRight: 15,
+    width: width * 0.75,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
     alignItems: 'center',
   },
-  trendText: {
+  appointmentDateBox: {
+    backgroundColor: '#E0F7FA',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 60,
+    height: 60,
+    marginRight: 15,
+  },
+  appointmentDateDay: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#00BCD4',
+  },
+  appointmentDateMonth: {
     fontSize: 12,
-    marginLeft: 5,
+    color: '#008BA3',
+    textTransform: 'uppercase',
+  },
+  appointmentDetails: {
+    flex: 1,
+  },
+  doctorName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  appointmentType: {
+    fontSize: 13,
+    color: '#777',
+    marginVertical: 2,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
+  metricCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  metricDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  metricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  metricItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#EEE',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  metricUnit: {
+    fontSize: 12,
+    color: '#AAA',
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: 16,
+    marginTop: 20,
+    fontStyle: 'italic',
   },
   tabBar: {
     flexDirection: 'row',
@@ -286,15 +467,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#888',
-    marginTop: 5,
+    marginTop: 4,
   },
   tabTextActive: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#00BCD4',
     fontWeight: 'bold',
-    marginTop: 5,
+    marginTop: 4,
   },
 });
 

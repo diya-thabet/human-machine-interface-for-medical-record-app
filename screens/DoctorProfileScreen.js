@@ -1,33 +1,76 @@
 // screens/DoctorProfileScreen.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '../firebaseConfig';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const DoctorProfileScreen = ({ navigation }) => {
-  // Dummy Doctor Data - replace with actual data from a state management or API call
-  const [doctorName, setDoctorName] = useState('Dr. Jane Smith');
-  const [doctorSpecialty, setDoctorSpecialty] = useState('General Practitioner');
-  const [doctorEmail, setDoctorEmail] = useState('jane.smith@clinic.com');
-  const [doctorPhone, setDoctorPhone] = useState('+1 555-987-6543');
-  const [doctorClinic, setDoctorClinic] = useState('Central Health Clinic');
-  const [doctorLicense, setDoctorLicense] = useState('MD1234567');
+  const [doctorName, setDoctorName] = useState('');
+  const [doctorSpecialty, setDoctorSpecialty] = useState('');
+  const [doctorEmail, setDoctorEmail] = useState('');
+  const [doctorPhone, setDoctorPhone] = useState('');
+  const [doctorClinic, setDoctorClinic] = useState('');
+  const [doctorLicense, setDoctorLicense] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSaveProfile = () => {
-    // Here you would typically send updated data to your backend
-    console.log('Saving Doctor Profile:', {
-      doctorName,
-      doctorSpecialty,
-      doctorEmail,
-      doctorPhone,
-      doctorClinic,
-      doctorLicense,
-    });
-    Alert.alert("Success", "Your profile has been updated!");
-    setIsEditing(false);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          navigation.replace('Login');
+          return;
+        }
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setDoctorName(userData.fullName || '');
+          setDoctorSpecialty(userData.specialty || '');
+          setDoctorEmail(userData.email || '');
+          setDoctorPhone(userData.phone || '');
+          setDoctorClinic(userData.clinic || '');
+          setDoctorLicense(userData.license || '');
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        Alert.alert("Error", "Failed to load profile data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleSaveProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      await updateDoc(doc(db, "users", user.uid), {
+        fullName: doctorName,
+        specialty: doctorSpecialty, // Note: Users usually don't self-edit this in some apps, but allowed here
+        phone: doctorPhone,
+        clinic: doctorClinic,
+        license: doctorLicense
+      });
+
+      Alert.alert("Success", "Your profile has been updated!");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      Alert.alert("Error", "Failed to update profile.");
+    }
   };
+
+
 
   const handleLogout = () => {
     Alert.alert(
@@ -63,107 +106,113 @@ const DoctorProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.profileCard}>
-          <Ionicons name="medkit-outline" size={100} color="#00BCD4" style={styles.profileIcon} />
-          {isEditing ? (
-            <TextInput
-              style={styles.editableNameInput}
-              value={doctorName}
-              onChangeText={setDoctorName}
-              placeholder="Full Name"
-            />
-          ) : (
-            <Text style={styles.profileName}>{doctorName}</Text>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#00BCD4" />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          <View style={styles.profileCard}>
+            <Ionicons name="medkit-outline" size={100} color="#00BCD4" style={styles.profileIcon} />
+            {isEditing ? (
+              <TextInput
+                style={styles.editableNameInput}
+                value={doctorName}
+                onChangeText={setDoctorName}
+                placeholder="Full Name"
+              />
+            ) : (
+              <Text style={styles.profileName}>{doctorName}</Text>
+            )}
+            <Text style={styles.profileRole}>{doctorSpecialty}</Text>
+          </View>
+
+          <View style={styles.infoSection}>
+            <View style={styles.infoItem}>
+              <Ionicons name="mail-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Email</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.editableInput}
+                    value={doctorEmail}
+                    onChangeText={setDoctorEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                ) : (
+                  <Text style={styles.infoText}>{doctorEmail}</Text>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Ionicons name="call-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Phone Number</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.editableInput}
+                    value={doctorPhone}
+                    onChangeText={setDoctorPhone}
+                    keyboardType="phone-pad"
+                  />
+                ) : (
+                  <Text style={styles.infoText}>{doctorPhone}</Text>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Ionicons name="business-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Clinic/Hospital</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.editableInput}
+                    value={doctorClinic}
+                    onChangeText={setDoctorClinic}
+                  />
+                ) : (
+                  <Text style={styles.infoText}>{doctorClinic}</Text>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Ionicons name="id-card-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Medical License</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={styles.editableInput}
+                    value={doctorLicense}
+                    onChangeText={setDoctorLicense}
+                    autoCapitalize="characters"
+                  />
+                ) : (
+                  <Text style={styles.infoText}>{doctorLicense}</Text>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {isEditing && (
+            <TouchableOpacity style={styles.actionButton} onPress={handleSaveProfile}>
+              <Text style={styles.actionButtonText}>Save Changes</Text>
+            </TouchableOpacity>
           )}
-          <Text style={styles.profileRole}>{doctorSpecialty}</Text>
-        </View>
 
-        <View style={styles.infoSection}>
-          <View style={styles.infoItem}>
-            <Ionicons name="mail-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Email</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.editableInput}
-                  value={doctorEmail}
-                  onChangeText={setDoctorEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              ) : (
-                <Text style={styles.infoText}>{doctorEmail}</Text>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Ionicons name="call-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Phone Number</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.editableInput}
-                  value={doctorPhone}
-                  onChangeText={setDoctorPhone}
-                  keyboardType="phone-pad"
-                />
-              ) : (
-                <Text style={styles.infoText}>{doctorPhone}</Text>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Ionicons name="business-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Clinic/Hospital</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.editableInput}
-                  value={doctorClinic}
-                  onChangeText={setDoctorClinic}
-                />
-              ) : (
-                <Text style={styles.infoText}>{doctorClinic}</Text>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Ionicons name="id-card-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Medical License</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.editableInput}
-                  value={doctorLicense}
-                  onChangeText={setDoctorLicense}
-                  autoCapitalize="characters"
-                />
-              ) : (
-                <Text style={styles.infoText}>{doctorLicense}</Text>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {isEditing && (
-          <TouchableOpacity style={styles.actionButton} onPress={handleSaveProfile}>
-            <Text style={styles.actionButtonText}>Save Changes</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Change Password", "Navigate to change password screen.")}>
+            <Text style={styles.actionButtonText}>Change Password</Text>
           </TouchableOpacity>
-        )}
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Change Password", "Navigate to change password screen.")}>
-          <Text style={styles.actionButtonText}>Change Password</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionButton, styles.logoutButton]} onPress={handleLogout}>
+            <Text style={styles.actionButtonText}>Logout</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionButton, styles.logoutButton]} onPress={handleLogout}>
-          <Text style={styles.actionButtonText}>Logout</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };

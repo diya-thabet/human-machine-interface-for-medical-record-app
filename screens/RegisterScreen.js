@@ -1,22 +1,52 @@
 // screens/RegisterScreen.js
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // For icons in role selection
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '../firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [role, setRole] = React.useState('PATIENT'); // Default role: PATIENT
+  const [role, setRole] = React.useState('PATIENT');
+  const [loading, setLoading] = React.useState(false);
 
-  const handleRegister = () => {
-    // Implement your registration logic here
-    console.log('Attempting registration with:', { fullName, email, password, role });
-    // In a real app, you would make an API call to /auth/register
-    // e.g., fetch('http://localhost:8080/auth/register', { /* ... */ })
-    // On successful registration, you might navigate back to login or directly to a dashboard
-    // For now, let's navigate back to Login
-    navigation.goBack();
+  const handleRegister = async () => {
+    if (!fullName || !email || !password) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Save user details and role to Firestore
+      // We use the Auth UID as the document ID for easier lookup later
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        fullName: fullName,
+        email: email,
+        role: role,
+        createdAt: new Date().toISOString()
+      });
+
+      console.log('User registered and profile created:', user.uid);
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() } // Navigate back to login
+      ]);
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Registration Failed', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,8 +105,12 @@ const RegisterScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>REGISTER</Text>
+          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>REGISTER</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

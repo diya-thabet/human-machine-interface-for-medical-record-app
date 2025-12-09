@@ -1,16 +1,52 @@
-// screens/LoginScreen.js (No changes needed if you copied my previous code exactly, just verifying)
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // Ensure this is from safe-area-context
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { auth, db } from '../firebaseConfig'; // Import auth and db
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
-  const handleLogin = () => {
-    console.log('Simulating login and navigating to Patient Dashboard');
-    // Ensure you've added PatientDashboard to App.js as instructed previously
-    navigation.navigate('PatientDashboard');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('User logged in:', user.email);
+
+      // Check User Role
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const role = userData.role;
+
+        if (role === 'DOCTOR') {
+          navigation.replace('DoctorDashboard');
+        } else {
+          navigation.replace('PatientDashboard');
+        }
+      } else {
+        // Fallback if no user doc found (shouldn't happen with correct registration)
+        console.warn("No user document found for ID:", user.uid);
+        navigation.replace('PatientDashboard');
+      }
+
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('Login Failed', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegisterPress = () => {
@@ -45,8 +81,12 @@ const LoginScreen = ({ navigation }) => {
             onChangeText={setPassword}
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>ENTER</Text>
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>ENTER</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleRegisterPress}>

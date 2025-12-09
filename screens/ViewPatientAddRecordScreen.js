@@ -1,25 +1,53 @@
 // screens/ViewPatientAddRecordScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // Ensure correct import for SafeAreaView if it causes issues
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { db } from '../firebaseConfig';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
-// Dummy data for health records (for the selected patient)
-const DUMMY_PATIENT_RECORDS = [
-  { id: 'p1r1', glucoseLevel: 110.0, bloodPressure: "115/75", weight: 70.0, date: "Aug 28, 2025 - 08:30 AM" },
-  { id: 'p1r2', glucoseLevel: 118.5, bloodPressure: "119/78", weight: 70.2, date: "Aug 27, 2025 - 09:15 AM" },
-  { id: 'p1r3', glucoseLevel: 105.7, bloodPressure: "110/70", weight: 69.5, date: "Aug 26, 2025 - 07:00 AM" },
-  { id: 'p1r4', glucoseLevel: 122.3, bloodPressure: "125/80", weight: 71.0, date: "Aug 25, 2025 - 08:45 AM" },
-];
-
 const ViewPatientAddRecordScreen = ({ navigation, route }) => {
   const { patientId, patientName } = route.params || { patientId: 'unknown', patientName: 'Patient Details' };
+  const [patientRecords, setPatientRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const patientRecords = DUMMY_PATIENT_RECORDS;
+  useEffect(() => {
+    if (!patientId) return;
 
-  const getChartData = () => patientRecords.map(record => record.glucoseLevel);
+    const q = query(
+      collection(db, "records"),
+      where("patientId", "==", patientId)
+      // orderBy("date", "desc") // Removed to bypass index
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedRecords = [];
+      querySnapshot.forEach((doc) => {
+        fetchedRecords.push({ id: doc.id, ...doc.data() });
+      });
+      // Client-side sort
+      fetchedRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setPatientRecords(fetchedRecords);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching patient records:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [patientId]);
+
+
+  const getChartData = () => {
+    if (patientRecords.length === 0) return [];
+    // improved chart data to be chronological
+    const chronologicalRecords = [...patientRecords].reverse();
+    return chronologicalRecords.map(record => parseFloat(record.glucoseLevel) || 0);
+  };
+
   const chartData = getChartData();
 
   const handleAddRecord = () => {
@@ -27,8 +55,14 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
   };
 
   const goToPatients = () => { navigation.navigate('DoctorDashboard'); };
-  // FIX: This line is updated to navigate to DoctorProfile
-  const goToMyProfile = () => navigation.navigate('DoctorProfile'); 
+  const goToMyProfile = () => navigation.navigate('DoctorProfile');
+
+  // Format date helper
+  const formatDate = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,44 +75,56 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Glucose Level Trend</Text>
-          <View style={styles.chartArea}>
-            {chartData.map((value, index) => {
-              const prevValue = index > 0 ? chartData[index - 1] : value;
-              const height1 = (prevValue / 200) * 100;
-              const height2 = (value / 200) * 100;
 
-              return (
-                <View key={index} style={styles.chartPointWrapper}>
-                  {index > 0 && (
-                    <View style={[styles.chartLine, {
-                      height: Math.abs(height2 - height1),
-                      transform: [{ translateY: Math.min(height1, height2) - 50 }],
-                      left: -20,
-                      backgroundColor: '#00BCD4',
-                    }]} />
-                  )}
-                  <View style={[styles.chartPoint, { bottom: height2 - 5 }]} />
-                </View>
-              );
-            })}
-          </View>
-          <Text style={styles.chartLabel}>Past {patientRecords.length} Days</Text>
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#00BCD4" />
+        ) : patientRecords.length === 0 ? (
+          <Text style={styles.noDataText}>No records found for this patient.</Text>
+        ) : (
+          <>
+            {/* Simple Chart */}
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>Glucose Level Trend</Text>
+              <View style={styles.chartArea}>
+                {chartData.map((value, index) => {
+                  const prevValue = index > 0 ? chartData[index - 1] : value;
+                  // Normalizing for chart height (assuming max 200 for simple viz)
+                  const height1 = Math.min((prevValue / 200) * 100, 100);
+                  const height2 = Math.min((value / 200) * 100, 100);
 
-        <View style={styles.recordsList}>
-          {patientRecords.map(record => (
-            <View key={record.id} style={styles.recordItem}>
-              <Text style={styles.recordDate}>{record.date}</Text>
-              <View style={styles.recordDetails}>
-                <Text style={styles.recordDetailText}>Glucose: <Text style={{fontWeight: 'bold', color: '#00BCD4'}}>{record.glucoseLevel}</Text></Text>
-                <Text style={styles.recordDetailText}>BP: {record.bloodPressure}</Text>
-                <Text style={styles.recordDetailText}>Weight: {record.weight} kg</Text>
+                  return (
+                    <View key={index} style={styles.chartPointWrapper}>
+                      {index > 0 && (
+                        <View style={[styles.chartLine, {
+                          height: Math.abs(height2 - height1),
+                          transform: [{ translateY: Math.min(height1, height2) - 50 }], // Approximate positioning
+                          left: -20, // Approximate spacing
+                          backgroundColor: '#00BCD4',
+                        }]} />
+                      )}
+                      <View style={[styles.chartPoint, { bottom: height2 - 5 }]} />
+                    </View>
+                  );
+                })}
               </View>
+              <Text style={styles.chartLabel}>Past {patientRecords.length} Entries</Text>
             </View>
-          ))}
-        </View>
+
+            {/* Records List */}
+            <View style={styles.recordsList}>
+              {patientRecords.map(record => (
+                <View key={record.id} style={styles.recordItem}>
+                  <Text style={styles.recordDate}>{formatDate(record.date)}</Text>
+                  <View style={styles.recordDetails}>
+                    {record.glucoseLevel && <Text style={styles.recordDetailText}>Glucose: <Text style={{ fontWeight: 'bold', color: '#00BCD4' }}>{record.glucoseLevel}</Text></Text>}
+                    {record.bloodPressure && <Text style={styles.recordDetailText}>BP: {record.bloodPressure}</Text>}
+                    {record.weight && <Text style={styles.recordDetailText}>Weight: {record.weight} kg</Text>}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Floating Action Button for adding new record */}
@@ -163,7 +209,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   chartPointWrapper: {
-    width: (width - 100) / DUMMY_PATIENT_RECORDS.length,
+    width: (width - 100) / 7, // Defaulting to 7 items for styling base
     height: '100%',
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -180,7 +226,7 @@ const styles = StyleSheet.create({
   },
   chartLine: {
     position: 'absolute',
-    width: (width - 100) / DUMMY_PATIENT_RECORDS.length + 10,
+    width: (width - 100) / 7 + 10, // Defaulting to 7 items
     backgroundColor: '#00BCD4',
   },
   chartLabel: {

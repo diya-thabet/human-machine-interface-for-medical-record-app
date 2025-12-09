@@ -66,3 +66,4 @@ metro.config.js
 # Optional: lock files (keep one)
 # yarn.lock
 # package-lock.json
+firebaseConfig.js
