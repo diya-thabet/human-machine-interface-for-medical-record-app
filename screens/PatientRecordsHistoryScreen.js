@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../firebaseConfig';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-
+import { LineChart } from "react-native-chart-kit";
 import { i18n } from '../i18n';
 
 const { width } = Dimensions.get('window');
@@ -125,28 +125,50 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
         ) : (
           <>
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>{i18n.t('glucose')}</Text>
-              <View style={styles.chartArea}>
-                {chartData.map((value, index) => {
-                  const prevValue = index > 0 ? chartData[index - 1] : value;
-                  const height1 = Math.min((prevValue / 200) * 100, 100);
-                  const height2 = Math.min((value / 200) * 100, 100);
-
-                  return (
-                    <View key={index} style={styles.chartPointWrapper}>
-                      {index > 0 && (
-                        <View style={[styles.chartLine, {
-                          height: Math.abs(height2 - height1),
-                          transform: [{ translateY: Math.min(height1, height2) - 50 }],
-                          left: -20,
-                          backgroundColor: '#00BCD4',
-                        }]} />
-                      )}
-                      <View style={[styles.chartPoint, { bottom: height2 - 5 }]} />
-                    </View>
-                  );
-                })}
-              </View>
+              <Text style={styles.chartTitle}>{i18n.t('glucose')} Analysis</Text>
+              {chartData.length > 0 ? (
+                <LineChart
+                  data={{
+                    labels: records.slice(0, 7).reverse().map(r => new Date(r.date).getDate().toString()),
+                    datasets: [
+                      {
+                        data: chartData,
+                        color: (opacity = 1) => `rgba(0, 188, 212, ${opacity})`,
+                        strokeWidth: 3
+                      }
+                    ]
+                  }}
+                  width={width - 40} // from react-native
+                  height={220}
+                  yAxisSuffix=""
+                  yAxisInterval={1}
+                  chartConfig={{
+                    backgroundColor: "#ffffff",
+                    backgroundGradientFrom: "#ffffff",
+                    backgroundGradientTo: "#ffffff",
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(0, 188, 212, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16
+                    },
+                    propsForDots: {
+                      r: "5",
+                      strokeWidth: "2",
+                      stroke: "#00BCD4"
+                    }
+                  }}
+                  bezier
+                  style={{
+                    marginVertical: 8,
+                    borderRadius: 16
+                  }}
+                  withDots={true}
+                  withInnerLines={true}
+                />
+              ) : (
+                <Text style={styles.noDataText}>Not enough data for chart</Text>
+              )}
               {getSpikeAnalysis()}
             </View>
 

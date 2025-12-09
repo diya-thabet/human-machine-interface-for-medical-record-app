@@ -141,18 +141,18 @@ const PatientDashboardScreen = ({ navigation }) => {
               <Text style={styles.actionText}>{i18n.t('history')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('RequestAppointment')}>
               <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
                 <Ionicons name="calendar" size={32} color="#9C27B0" />
               </View>
-              <Text style={styles.actionText}>Appt.</Text>
+              <Text style={styles.actionText}>{i18n.t('upcoming_appointments') || 'Appt.'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('PatientDiet')}>
               <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
                 <Ionicons name="nutrition" size={32} color="#FF9800" />
               </View>
-              <Text style={styles.actionText}>Diet</Text>
+              <Text style={styles.actionText}>{i18n.t('diet') || 'Diet'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -301,12 +301,20 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // Keeps them spaced out
   },
   actionCard: {
-    width: '23%',
+    width: '45%', // Change from 23% to 45% (2 per row) for better tappability and visibility
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 20,
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   iconContainer: {
     width: 60,

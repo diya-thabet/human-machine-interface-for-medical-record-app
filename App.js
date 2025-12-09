@@ -22,6 +22,10 @@ import DoctorDashboardScreen from './screens/DoctorDashboardScreen'; // NEW: Doc
 import ViewPatientProfileScreen from './screens/ViewPatientProfileScreen'; // Assuming this exists or will be created for doctors to view *other* patients
 import ViewPatientAddRecordScreen from './screens/ViewPatientAddRecordScreen'; // NEW: Doctors view *their own* patients' records
 import DoctorProfileScreen from './screens/DoctorProfileScreen'; // NEW: Doctor Profile Screen
+import DoctorDietScreen from './screens/DoctorDietScreen';
+import PatientDietScreen from './screens/PatientDietScreen';
+import RequestAppointmentScreen from './screens/RequestAppointmentScreen';
+import DoctorAppointmentScreen from './screens/DoctorAppointmentScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -30,8 +34,8 @@ export default function App() {
 
   React.useEffect(() => {
     const loadLanguage = async () => {
-        await i18n.init();
-        setIsI18nInitialized(true);
+      await i18n.init();
+      setIsI18nInitialized(true);
     };
     loadLanguage();
   }, []);
@@ -96,9 +100,30 @@ export default function App() {
             component={DoctorProfileScreen}
             options={{ headerShown: false }}
           />
-           <Stack.Screen
+
+          <Stack.Screen
             name="Settings"
             component={SettingsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="DoctorDiet"
+            component={DoctorDietScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="PatientDiet"
+            component={PatientDietScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="RequestAppointment"
+            component={RequestAppointmentScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="DoctorAppointment"
+            component={DoctorAppointmentScreen}
             options={{ headerShown: false }}
           />
 

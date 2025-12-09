@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '../firebaseConfig';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { LineChart } from "react-native-chart-kit";
 import { i18n } from '../i18n';
 
 const { width } = Dimensions.get('window');
@@ -62,6 +63,10 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
     navigation.navigate('AddRecord', { patientId: patientId, patientName: patientName });
   };
 
+  const handleScheduleAppointment = () => {
+    navigation.navigate('DoctorAppointment', { patientId: patientId, patientName: patientName });
+  };
+
   const goToPatients = () => { navigation.navigate('DoctorDashboard'); };
   const goToMyProfile = () => navigation.navigate('DoctorProfile');
 
@@ -90,32 +95,55 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
           <Text style={styles.noDataText}>{i18n.t('no_records') || "No records found for this patient."}</Text>
         ) : (
           <>
-            {/* Simple Chart */}
+            {/* Premium Linear Chart */}
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>{i18n.t('glucose')}</Text>
-              <View style={styles.chartArea}>
-                {chartData.map((value, index) => {
-                  const prevValue = index > 0 ? chartData[index - 1] : value;
-                  // Normalizing for chart height (assuming max 200 for simple viz)
-                  const height1 = Math.min((prevValue / 200) * 100, 100);
-                  const height2 = Math.min((value / 200) * 100, 100);
-
-                  return (
-                    <View key={index} style={styles.chartPointWrapper}>
-                      {index > 0 && (
-                        <View style={[styles.chartLine, {
-                          height: Math.abs(height2 - height1),
-                          transform: [{ translateY: Math.min(height1, height2) - 50 }], // Approximate positioning
-                          left: -20, // Approximate spacing
-                          backgroundColor: '#00BCD4',
-                        }]} />
-                      )}
-                      <View style={[styles.chartPoint, { bottom: height2 - 5 }]} />
-                    </View>
-                  );
-                })}
-              </View>
-              <Text style={styles.chartLabel}>Past {patientRecords.length} Entries</Text>
+              <Text style={styles.chartTitle}>{i18n.t('glucose')} History</Text>
+              {chartData.length > 0 ? (
+                <LineChart
+                  data={{
+                    labels: patientRecords.slice(0, 5).reverse().map(r => new Date(r.date).getDate().toString()), // Last 5 days for labels
+                    datasets: [
+                      {
+                        data: chartData.length > 0 ? chartData : [0],
+                        color: (opacity = 1) => `rgba(0, 188, 212, ${opacity})`, // optional
+                        strokeWidth: 3 // optional
+                      }
+                    ]
+                  }}
+                  width={width - 40} // from react-native
+                  height={220}
+                  yAxisSuffix=""
+                  yAxisInterval={1} // optional, defaults to 1
+                  chartConfig={{
+                    backgroundColor: "#ffffff",
+                    backgroundGradientFrom: "#ffffff",
+                    backgroundGradientTo: "#ffffff",
+                    decimalPlaces: 0, // optional, defaults to 2dp
+                    color: (opacity = 1) => `rgba(0, 188, 212, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16
+                    },
+                    propsForDots: {
+                      r: "6",
+                      strokeWidth: "2",
+                      stroke: "#00BCD4"
+                    }
+                  }}
+                  bezier
+                  style={{
+                    marginVertical: 8,
+                    borderRadius: 16
+                  }}
+                  withDots={true}
+                  withInnerLines={true}
+                  withOuterLines={false}
+                  withVerticalLines={false}
+                />
+              ) : (
+                <Text style={styles.noDataText}>Not enough data for chart</Text>
+              )}
+              <Text style={styles.chartLabel}>Recent Glucose Levels (mg/dL)</Text>
             </View>
 
             {/* Records List */}
@@ -293,6 +321,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     zIndex: 10,
+  },
+  fabSecondary: {
+    bottom: Platform.OS === 'ios' ? 170 : 190, // Above the Add Record FAB
+    backgroundColor: '#9C27B0', // different color for distinction
   },
   tabBar: {
     flexDirection: 'row',

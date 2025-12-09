@@ -63,6 +63,10 @@ const DoctorDashboardScreen = ({ navigation }) => {
     navigation.navigate('ViewPatientAddRecord', { patientId, patientName });
   };
 
+  const handleAssignDiet = (patient) => {
+    navigation.navigate('DoctorDiet', { patientId: patient.id, patientName: patient.fullName });
+  };
+
   const handleRemovePatient = (patientId, name) => {
     Alert.alert(
       i18n.t('remove_patient'),
@@ -179,12 +183,21 @@ const DoctorDashboardScreen = ({ navigation }) => {
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={() => handleRemovePatient(patient.id, patient.fullName)}
-                  style={styles.removeButton}
-                >
-                  <Ionicons name="trash-outline" size={24} color="#F44336" />
-                </TouchableOpacity>
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleAssignDiet(patient)}
+                  >
+                    <Ionicons name="nutrition-outline" size={24} color="#00BCD4" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleRemovePatient(patient.id, patient.fullName)}
+                  >
+                    <Ionicons name="trash-outline" size={24} color="#F44336" />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -458,10 +471,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 5,
   },
-  removeButton: {
-    padding: 10,
-    justifyContent: 'center',
+  actionButtons: {
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  actionButton: {
+    padding: 10,
+    marginLeft: 5,
   }
 });
 
