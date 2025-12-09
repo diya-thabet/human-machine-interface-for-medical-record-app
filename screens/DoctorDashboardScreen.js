@@ -225,6 +225,7 @@ const DoctorDashboardScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Top Header */}
       <View style={styles.header}>
+        <View style={{ width: 40 }} />
         <Text style={styles.title}>{i18n.t('welcome')}, Dr. {doctorName}</Text>
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => navigation.navigate('DoctorProfile')} style={styles.iconButton}>
@@ -364,10 +365,10 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     flex: 1,
     textAlign: 'center',
-    marginLeft: 28, // Offset for settings button to center title
   },
   settingsButton: {
     padding: 5,
+    // Width matched to back button or spacer if needed, but here we just need it to not push title off-center if we use flex
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -379,6 +380,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2C3E50',
     marginBottom: 20,
+    marginHorizontal: 20, // Align with search bar and list content
   },
   searchContainer: {
     flexDirection: 'row',
@@ -411,10 +413,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   cardHeader: {
-    flexDirection: 'row', // Enforce LTR structure
+    flexDirection: 'row',
     padding: 15,
     alignItems: 'center',
-    direction: 'ltr',
   },
   avatar: {
     width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0F7FA',
@@ -449,17 +450,18 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    flexDirection: 'row',
-    paddingHorizontal: 8, // Reduced padding
+    flexDirection: 'column', // Stack icon and text vertically
     justifyContent: 'center',
-    flex: 1, // Distribute space evenly
+    flex: 1,
+    paddingVertical: 5,
   },
   actionLabel: {
-    marginLeft: 4,
-    fontSize: 13, // Slightly smaller font
+    marginTop: 4, // Spacing between icon and text
+    marginLeft: 0,
+    fontSize: 11, // Smaller font for compactness
     color: '#555',
-    fontWeight: '500',
-    flexShrink: 1, // Allow text to shrink/wrap if needed
+    fontWeight: '600',
+    textAlign: 'center',
   },
   listContent: {
     paddingHorizontal: 20,
