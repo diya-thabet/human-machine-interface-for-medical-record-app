@@ -1,11 +1,12 @@
 // screens/AddRecordScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db, auth } from '../firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
+import { i18n } from '../i18n';
 
 const AddRecordScreen = ({ navigation, route }) => {
   // If coming from Doctor dashboard, we might have patientId. 
@@ -19,6 +20,13 @@ const AddRecordScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Force update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   const onDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -36,12 +44,12 @@ const AddRecordScreen = ({ navigation, route }) => {
     const targetPatientId = paramPatientId || auth.currentUser?.uid;
 
     if (!targetPatientId) {
-      Alert.alert("Error", "No patient identified. Please login again.");
+      Alert.alert(i18n.t('error'), "No patient identified. Please login again.");
       return;
     }
 
     if (!glucoseLevel && !bloodPressure && !weight) {
-      Alert.alert("Error", "Please enter at least one health metric.");
+      Alert.alert(i18n.t('error'), "Please enter at least one health metric.");
       return;
     }
 
@@ -58,13 +66,13 @@ const AddRecordScreen = ({ navigation, route }) => {
       });
 
       console.log('Record saved successfully');
-      Alert.alert("Success", "Record added successfully!", [
+      Alert.alert(i18n.t('success'), i18n.t('record_added') || "Record added successfully!", [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
 
     } catch (error) {
       console.error("Error adding record: ", error);
-      Alert.alert("Error", "Failed to save record: " + error.message);
+      Alert.alert(i18n.t('error'), "Failed to save record: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -91,14 +99,14 @@ const AddRecordScreen = ({ navigation, route }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color="#2C3E50" />
           </TouchableOpacity>
-          <Text style={styles.title}>Add Record {patientName ? `for ${patientName}` : ''}</Text>
+          <Text style={styles.title}>{i18n.t('add_record')} {patientName ? `for ${patientName}` : ''}</Text>
           <View style={{ width: 28 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
           <TextInput
             style={styles.input}
-            placeholder="Glucose Level (e.g., 120.5)"
+            placeholder={i18n.t('glucose') + " (mg/dL)"}
             placeholderTextColor="#888"
             keyboardType="numeric"
             value={glucoseLevel}
@@ -107,7 +115,7 @@ const AddRecordScreen = ({ navigation, route }) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Blood Pressure (e.g., 120/80)"
+            placeholder={i18n.t('blood_pressure') + " (e.g. 120/80)"}
             placeholderTextColor="#888"
             keyboardType="default"
             autoCapitalize="none"
@@ -117,7 +125,7 @@ const AddRecordScreen = ({ navigation, route }) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Weight (kg)"
+            placeholder={i18n.t('weight') + " (kg)"}
             placeholderTextColor="#888"
             keyboardType="numeric"
             value={weight}
@@ -126,7 +134,7 @@ const AddRecordScreen = ({ navigation, route }) => {
 
           <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
             <Ionicons name="calendar-outline" size={24} color="#00BCD4" />
-            <Text style={styles.datePickerButtonText}>Date: {formattedDate}</Text>
+            <Text style={styles.datePickerButtonText}>{i18n.t('date')}: {formattedDate}</Text>
           </TouchableOpacity>
           {showDatePicker && (
             <DateTimePicker
@@ -141,7 +149,7 @@ const AddRecordScreen = ({ navigation, route }) => {
 
           <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowTimePicker(true)}>
             <Ionicons name="time-outline" size={24} color="#00BCD4" />
-            <Text style={styles.datePickerButtonText}>Time: {formattedTime}</Text>
+            <Text style={styles.datePickerButtonText}>{i18n.t('time')}: {formattedTime}</Text>
           </TouchableOpacity>
           {showTimePicker && (
             <DateTimePicker
@@ -158,7 +166,7 @@ const AddRecordScreen = ({ navigation, route }) => {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.saveButtonText}>SAVE RECORD</Text>
+              <Text style={styles.saveButtonText}>{i18n.t('save')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

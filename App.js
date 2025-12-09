@@ -1,8 +1,10 @@
+
 // App.js
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { i18n } from './i18n'; // Import i18n
 
 // Import all your screens
 import LoginScreen from './screens/LoginScreen';
@@ -13,6 +15,7 @@ import PatientDashboardScreen from './screens/PatientDashboardScreen';
 import PatientRecordsHistoryScreen from './screens/PatientRecordsHistoryScreen';
 import AddRecordScreen from './screens/AddRecordScreen';
 import PatientProfileScreen from './screens/PatientProfileScreen'; // NEW: Patient Profile Screen
+import SettingsScreen from './screens/SettingsScreen'; // NEW: Settings Screen
 
 // Doctor Screens (assuming these exist or will be created)
 import DoctorDashboardScreen from './screens/DoctorDashboardScreen'; // NEW: Doctor Dashboard Screen
@@ -23,6 +26,18 @@ import DoctorProfileScreen from './screens/DoctorProfileScreen'; // NEW: Doctor 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [isI18nInitialized, setIsI18nInitialized] = React.useState(false);
+
+  React.useEffect(() => {
+    const loadLanguage = async () => {
+        await i18n.init();
+        setIsI18nInitialized(true);
+    };
+    loadLanguage();
+  }, []);
+
+  if (!isI18nInitialized) return null; // Or a splash screen
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
@@ -79,6 +94,11 @@ export default function App() {
           <Stack.Screen // NEW: DoctorProfileScreen route
             name="DoctorProfile"
             component={DoctorProfileScreen}
+            options={{ headerShown: false }}
+          />
+           <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
             options={{ headerShown: false }}
           />
 

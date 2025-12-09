@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../firebaseConfig';
 import { collection, query, where, limit, orderBy, onSnapshot } from 'firebase/firestore';
 
+import { i18n } from '../i18n';
+
 const { width } = Dimensions.get('window');
 
 const PatientDashboardScreen = ({ navigation }) => {
@@ -14,6 +16,13 @@ const PatientDashboardScreen = ({ navigation }) => {
   const [recentRecords, setRecentRecords] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Force update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -104,7 +113,7 @@ const PatientDashboardScreen = ({ navigation }) => {
       {/* Header Section */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greetingText}>Hello,</Text>
+          <Text style={styles.greetingText}>{i18n.t('welcome') || "Hello"},</Text>
           <Text style={styles.userNameText}>{patientName}!</Text>
         </View>
         <TouchableOpacity onPress={handleSignOut} style={styles.profileIcon}>
@@ -122,28 +131,28 @@ const PatientDashboardScreen = ({ navigation }) => {
               <View style={[styles.iconContainer, { backgroundColor: '#E0F7FA' }]}>
                 <Ionicons name="add-circle" size={32} color="#00BCD4" />
               </View>
-              <Text style={styles.actionText}>Add Record</Text>
+              <Text style={styles.actionText}>{i18n.t('add_record')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionCard} onPress={goToHistory}>
               <View style={[styles.iconContainer, { backgroundColor: '#E3F2FD' }]}>
                 <Ionicons name="time" size={32} color="#2196F3" />
               </View>
-              <Text style={styles.actionText}>History</Text>
+              <Text style={styles.actionText}>{i18n.t('history')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionCard}>
               <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
                 <Ionicons name="calendar" size={32} color="#9C27B0" />
               </View>
-              <Text style={styles.actionText}>Appointments</Text>
+              <Text style={styles.actionText}>Appt.</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionCard}>
               <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
                 <Ionicons name="nutrition" size={32} color="#FF9800" />
               </View>
-              <Text style={styles.actionText}>Diet Plan</Text>
+              <Text style={styles.actionText}>Diet</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -151,7 +160,7 @@ const PatientDashboardScreen = ({ navigation }) => {
         {/* Upcoming Appointments */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('upcoming_appointments')}</Text>
             <TouchableOpacity><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
           </View>
 
@@ -186,7 +195,7 @@ const PatientDashboardScreen = ({ navigation }) => {
 
         {/* Recent Health Metrics */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Recent Record Updates</Text>
+          <Text style={styles.sectionTitle}>{i18n.t('recent_records')}</Text>
           {loading ? (
             <ActivityIndicator size="large" color="#00BCD4" />
           ) : recentRecords.length === 0 ? (
@@ -199,14 +208,14 @@ const PatientDashboardScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.metricRow}>
                   <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Glucose</Text>
+                    <Text style={styles.metricLabel}>{i18n.t('glucose')}</Text>
                     <Text style={styles.metricValue}>{record.glucoseLevel || '--'}</Text>
                     <Text style={styles.metricUnit}>mg/dL</Text>
                   </View>
                   {/* Divider */}
                   <View style={styles.verticalDivider} />
                   <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Weight</Text>
+                    <Text style={styles.metricLabel}>{i18n.t('weight')}</Text>
                     <Text style={styles.metricValue}>{record.weight || '--'}</Text>
                     <Text style={styles.metricUnit}>kg</Text>
                   </View>
@@ -226,11 +235,11 @@ const PatientDashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={goToHistory}>
           <Ionicons name="stats-chart-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>My Records</Text>
+          <Text style={styles.tabText}>{i18n.t('history')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('PatientProfile')}>
           <Ionicons name="person-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>My Profile</Text>
+          <Text style={styles.tabText}>{i18n.t('profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

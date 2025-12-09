@@ -1,18 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../firebaseConfig'; // Import auth and db
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { i18n } from '../i18n';
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Force update for language changes
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      Alert.alert(i18n.t('error'), 'Please enter both email and password.');
       return;
     }
 
@@ -43,7 +51,7 @@ const LoginScreen = ({ navigation }) => {
 
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Login Failed', error.message);
+      Alert.alert(i18n.t('error'), error.message);
     } finally {
       setLoading(false);
     }
@@ -60,11 +68,11 @@ const LoginScreen = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>LOGIN</Text>
+          <Text style={styles.title}>{i18n.t('login')}</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={i18n.t('email')}
             placeholderTextColor="#888"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -74,7 +82,7 @@ const LoginScreen = ({ navigation }) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={i18n.t('password')}
             placeholderTextColor="#888"
             secureTextEntry
             value={password}
@@ -85,12 +93,12 @@ const LoginScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>ENTER</Text>
+              <Text style={styles.buttonText}>{i18n.t('enter')}</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleRegisterPress}>
-            <Text style={styles.registerLink}>Don't have an account? Register now</Text>
+            <Text style={styles.registerLink}>{i18n.t('register_link')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

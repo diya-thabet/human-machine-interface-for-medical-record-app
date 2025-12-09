@@ -7,6 +7,8 @@ import { auth, db } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
+import { i18n } from '../i18n';
+
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -14,9 +16,16 @@ const RegisterScreen = ({ navigation }) => {
   const [role, setRole] = React.useState('PATIENT');
   const [loading, setLoading] = React.useState(false);
 
+  // Force update
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
+
   const handleRegister = async () => {
     if (!fullName || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(i18n.t('error'), 'Please fill in all fields.');
       return;
     }
 
@@ -37,13 +46,13 @@ const RegisterScreen = ({ navigation }) => {
       });
 
       console.log('User registered and profile created:', user.uid);
-      Alert.alert('Success', 'Account created successfully!', [
+      Alert.alert(i18n.t('success'), 'Account created successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() } // Navigate back to login
       ]);
 
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Registration Failed', error.message);
+      Alert.alert(i18n.t('error'), error.message);
     } finally {
       setLoading(false);
     }
@@ -56,11 +65,11 @@ const RegisterScreen = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>REGISTER NEW ACCOUNT</Text>
+          <Text style={styles.title}>{i18n.t('register')}</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
+            placeholder={i18n.t('full_name')}
             placeholderTextColor="#888"
             autoCapitalize="words"
             value={fullName}
@@ -69,7 +78,7 @@ const RegisterScreen = ({ navigation }) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={i18n.t('email')}
             placeholderTextColor="#888"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -79,7 +88,7 @@ const RegisterScreen = ({ navigation }) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={i18n.t('password')}
             placeholderTextColor="#888"
             secureTextEntry
             value={password}
@@ -93,7 +102,7 @@ const RegisterScreen = ({ navigation }) => {
               onPress={() => setRole('PATIENT')}
             >
               <Ionicons name="person-outline" size={24} color={role === 'PATIENT' ? '#FFF' : '#00BCD4'} />
-              <Text style={[styles.roleButtonText, role === 'PATIENT' && styles.roleButtonTextActive]}>I am a Patient</Text>
+              <Text style={[styles.roleButtonText, role === 'PATIENT' && styles.roleButtonTextActive]}>{i18n.t('patient')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -101,7 +110,7 @@ const RegisterScreen = ({ navigation }) => {
               onPress={() => setRole('DOCTOR')}
             >
               <Ionicons name="medical-outline" size={24} color={role === 'DOCTOR' ? '#FFF' : '#00BCD4'} />
-              <Text style={[styles.roleButtonText, role === 'DOCTOR' && styles.roleButtonTextActive]}>I am a Doctor</Text>
+              <Text style={[styles.roleButtonText, role === 'DOCTOR' && styles.roleButtonTextActive]}>{i18n.t('doctor')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -109,7 +118,7 @@ const RegisterScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>REGISTER</Text>
+              <Text style={styles.buttonText}>{i18n.t('register').toUpperCase()}</Text>
             )}
           </TouchableOpacity>
         </View>

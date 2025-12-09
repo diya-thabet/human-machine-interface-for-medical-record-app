@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { i18n } from '../i18n';
 
 const DoctorProfileScreen = ({ navigation }) => {
   const [doctorName, setDoctorName] = useState('');
@@ -16,6 +17,13 @@ const DoctorProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
 
   const [isEditing, setIsEditing] = useState(false);
+
+  // Force update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -40,7 +48,7 @@ const DoctorProfileScreen = ({ navigation }) => {
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
-        Alert.alert("Error", "Failed to load profile data.");
+        Alert.alert(i18n.t('error'), "Failed to load profile data.");
       } finally {
         setLoading(false);
       }
@@ -56,37 +64,34 @@ const DoctorProfileScreen = ({ navigation }) => {
 
       await updateDoc(doc(db, "users", user.uid), {
         fullName: doctorName,
-        specialty: doctorSpecialty, // Note: Users usually don't self-edit this in some apps, but allowed here
+        specialty: doctorSpecialty,
         phone: doctorPhone,
         clinic: doctorClinic,
         license: doctorLicense
       });
 
-      Alert.alert("Success", "Your profile has been updated!");
+      Alert.alert(i18n.t('success'), "Your profile has been updated!");
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      Alert.alert("Error", "Failed to update profile.");
+      Alert.alert(i18n.t('error'), "Failed to update profile.");
     }
   };
 
-
-
   const handleLogout = () => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to log out?",
+      i18n.t('logout'),
+      i18n.t('confirm_logout'),
       [
         {
-          text: "Cancel",
+          text: i18n.t('cancel'),
           style: "cancel"
         },
         {
-          text: "Logout",
+          text: i18n.t('logout'),
           onPress: () => {
-            // Implement your logout logic here (e.g., clear tokens, navigate to login)
             console.log("Doctor logged out");
-            navigation.replace('Login'); // Navigate to Login screen
+            navigation.replace('Login');
           },
           style: "destructive"
         }
@@ -100,7 +105,7 @@ const DoctorProfileScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#2C3E50" />
         </TouchableOpacity>
-        <Text style={styles.title}>My Profile</Text>
+        <Text style={styles.title}>{i18n.t('profile')}</Text>
         <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editButton}>
           <Ionicons name={isEditing ? "checkmark-circle-outline" : "create-outline"} size={28} color="#00BCD4" />
         </TouchableOpacity>
@@ -131,7 +136,7 @@ const DoctorProfileScreen = ({ navigation }) => {
             <View style={styles.infoItem}>
               <Ionicons name="mail-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
               <View>
-                <Text style={styles.infoLabel}>Email</Text>
+                <Text style={styles.infoLabel}>{i18n.t('email')}</Text>
                 {isEditing ? (
                   <TextInput
                     style={styles.editableInput}
@@ -149,7 +154,7 @@ const DoctorProfileScreen = ({ navigation }) => {
             <View style={styles.infoItem}>
               <Ionicons name="call-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
               <View>
-                <Text style={styles.infoLabel}>Phone Number</Text>
+                <Text style={styles.infoLabel}>{i18n.t('phone_number')}</Text>
                 {isEditing ? (
                   <TextInput
                     style={styles.editableInput}
@@ -166,7 +171,7 @@ const DoctorProfileScreen = ({ navigation }) => {
             <View style={styles.infoItem}>
               <Ionicons name="business-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
               <View>
-                <Text style={styles.infoLabel}>Clinic/Hospital</Text>
+                <Text style={styles.infoLabel}>{i18n.t('clinic')}</Text>
                 {isEditing ? (
                   <TextInput
                     style={styles.editableInput}
@@ -182,7 +187,7 @@ const DoctorProfileScreen = ({ navigation }) => {
             <View style={styles.infoItem}>
               <Ionicons name="id-card-outline" size={24} color="#00BCD4" style={styles.infoIcon} />
               <View>
-                <Text style={styles.infoLabel}>Medical License</Text>
+                <Text style={styles.infoLabel}>{i18n.t('license')}</Text>
                 {isEditing ? (
                   <TextInput
                     style={styles.editableInput}
@@ -199,16 +204,16 @@ const DoctorProfileScreen = ({ navigation }) => {
 
           {isEditing && (
             <TouchableOpacity style={styles.actionButton} onPress={handleSaveProfile}>
-              <Text style={styles.actionButtonText}>Save Changes</Text>
+              <Text style={styles.actionButtonText}>{i18n.t('save')}</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Change Password", "Navigate to change password screen.")}>
-            <Text style={styles.actionButtonText}>Change Password</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Settings')}>
+            <Text style={styles.actionButtonText}>{i18n.t('change_language')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.actionButton, styles.logoutButton]} onPress={handleLogout}>
-            <Text style={styles.actionButtonText}>Logout</Text>
+            <Text style={styles.actionButtonText}>{i18n.t('logout')}</Text>
           </TouchableOpacity>
 
         </ScrollView>

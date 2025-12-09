@@ -1,11 +1,11 @@
 
-// screens/DoctorDashboardScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Dimensions, ActivityIndicator, Modal, TextInput, Alert, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../firebaseConfig';
-import { collection, query, where, onSnapshot, getDocs, updateDoc, arrayUnion, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, updateDoc, arrayUnion, arrayRemove, doc } from 'firebase/firestore'; // Added arrayRemove
+import { i18n } from '../i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +16,13 @@ const DoctorDashboardScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchEmail, setSearchEmail] = useState('');
   const [assigning, setAssigning] = useState(false);
+
+  // Force update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -56,13 +63,38 @@ const DoctorDashboardScreen = ({ navigation }) => {
     navigation.navigate('ViewPatientAddRecord', { patientId, patientName });
   };
 
+  const handleRemovePatient = (patientId, name) => {
+    Alert.alert(
+      i18n.t('remove_patient'),
+      i18n.t('confirm_remove_patient'),
+      [
+        { text: i18n.t('cancel'), style: 'cancel' },
+        {
+          text: i18n.t('remove'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, "users", patientId), {
+                assignedDoctorIds: arrayRemove(auth.currentUser.uid)
+              });
+              Alert.alert(i18n.t('success'), "Patient removed.");
+            } catch (error) {
+              console.error("Error removing patient:", error);
+              Alert.alert(i18n.t('error'), "Failed to remove patient.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleAddPatient = () => {
     setModalVisible(true);
   };
 
   const assignPatient = async () => {
     if (!searchEmail) {
-      Alert.alert("Error", "Please enter an email address.");
+      Alert.alert(i18n.t('error'), "Please enter an email address.");
       return;
     }
 
@@ -77,7 +109,7 @@ const DoctorDashboardScreen = ({ navigation }) => {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        Alert.alert("Not Found", "No patient found with this email.");
+        Alert.alert(i18n.t('error'), "No patient found with this email.");
         setAssigning(false);
         return;
       }
@@ -100,13 +132,13 @@ const DoctorDashboardScreen = ({ navigation }) => {
         assignedDoctorIds: arrayUnion(auth.currentUser.uid)
       });
 
-      Alert.alert("Success", "Patient " + (patientData.fullName || searchEmail) + " assigned successfully!");
+      Alert.alert(i18n.t('success'), "Patient " + (patientData.fullName || searchEmail) + " assigned successfully!");
       setModalVisible(false);
       setSearchEmail('');
 
     } catch (error) {
       console.error("Error assigning patient:", error);
-      Alert.alert("Error", "Failed to assign patient. " + error.message);
+      Alert.alert(i18n.t('error'), "Failed to assign patient. " + error.message);
     } finally {
       setAssigning(false);
     }
@@ -115,40 +147,45 @@ const DoctorDashboardScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Welcome, Dr. {doctorName}</Text>
-        <TouchableOpacity onPress={() => console.log('Doctor Settings')} style={styles.settingsButton}>
+        <Text style={styles.title}>{i18n.t('welcome')}, Dr. {doctorName}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.settingsButton}>
           <Ionicons name="settings-outline" size={28} color="#2C3E50" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <Text style={styles.sectionTitle}>My Patients</Text>
+        <Text style={styles.sectionTitle}>{i18n.t('my_patients')}</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#00BCD4" />
         ) : patients.length === 0 ? (
           <View style={styles.emptyStateContainer}>
             <Ionicons name="people-outline" size={60} color="#DDD" />
-            <Text style={styles.noDataText}>No patients assigned yet.</Text>
-            <Text style={styles.subText}>Tap the + button to assign a patient by email.</Text>
+            <Text style={styles.noDataText}>{i18n.t('no_patients') || "No patients assigned yet."}</Text>
+            <Text style={styles.subText}>{i18n.t('tap_plus_assign') || "Tap the + button to assign a patient by email."}</Text>
           </View>
         ) : (
           <View style={styles.patientList}>
             {patients.map(patient => (
-              <TouchableOpacity
-                key={patient.id}
-                style={styles.patientCard}
-                onPress={() => handleViewPatientRecords(patient.id, patient.fullName || patient.email)}
-              >
-                <View style={styles.patientInfo}>
+              <View key={patient.id} style={styles.patientCard}>
+                <TouchableOpacity
+                  style={styles.patientInfo}
+                  onPress={() => handleViewPatientRecords(patient.id, patient.fullName || patient.email)}
+                >
                   <Ionicons name="person-circle-outline" size={40} color="#00BCD4" />
                   <View style={styles.patientTextContainer}>
                     <Text style={styles.patientName}>{patient.fullName || patient.email}</Text>
                     <Text style={styles.patientDetail}>Email: {patient.email}</Text>
                     <Text style={styles.patientDetail}>Status: Active</Text>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={24} color="#888" />
-              </TouchableOpacity>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleRemovePatient(patient.id, patient.fullName)}
+                  style={styles.removeButton}
+                >
+                  <Ionicons name="trash-outline" size={24} color="#F44336" />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         )}
@@ -171,12 +208,12 @@ const DoctorDashboardScreen = ({ navigation }) => {
           style={styles.centeredView}
         >
           <View style={styles.modalView}>
-            <Text style={styles.modalText}>Assign Existing Patient</Text>
+            <Text style={styles.modalText}>{i18n.t('assign')} {i18n.t('patient')}</Text>
             <Text style={styles.modalSubText}>Enter the patient's email address to add them to your list.</Text>
 
             <TextInput
               style={styles.modalInput}
-              placeholder="Patient Email"
+              placeholder={i18n.t('search_email')}
               placeholderTextColor="#999"
               value={searchEmail}
               onChangeText={setSearchEmail}
@@ -189,14 +226,14 @@ const DoctorDashboardScreen = ({ navigation }) => {
                 style={[styles.button, styles.buttonClose]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.textStyle}>Cancel</Text>
+                <Text style={styles.textStyle}>{i18n.t('cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.buttonAssign]}
                 onPress={assignPatient}
                 disabled={assigning}
               >
-                {assigning ? <ActivityIndicator color="#FFF" /> : <Text style={styles.textStyle}>Assign</Text>}
+                {assigning ? <ActivityIndicator color="#FFF" /> : <Text style={styles.textStyle}>{i18n.t('assign')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -207,11 +244,11 @@ const DoctorDashboardScreen = ({ navigation }) => {
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={goToPatients}>
           <Ionicons name="people-outline" size={24} color="#00BCD4" />
-          <Text style={styles.tabTextActive}>Patients</Text>
+          <Text style={styles.tabTextActive}>{i18n.t('my_patients')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={goToMyProfile}>
           <Ionicons name="person-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>My Profile</Text>
+          <Text style={styles.tabText}>{i18n.t('profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -420,6 +457,11 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 14,
     marginTop: 5,
+  },
+  removeButton: {
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 

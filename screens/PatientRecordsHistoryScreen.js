@@ -7,11 +7,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../firebaseConfig';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
+import { i18n } from '../i18n';
+
 const { width } = Dimensions.get('window');
 
 const PatientRecordsHistoryScreen = ({ navigation }) => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Force update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -54,6 +63,32 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
 
   const chartData = getChartData();
 
+  const getSpikeAnalysis = () => {
+    if (records.length === 0) return null;
+    let maxGlucose = 0;
+    let maxDate = '';
+
+    records.forEach(r => {
+      const val = parseFloat(r.glucoseLevel) || 0;
+      if (val > maxGlucose) {
+        maxGlucose = val;
+        maxDate = r.date;
+      }
+    });
+
+    if (maxGlucose === 0) return null;
+
+    return (
+      <View style={styles.spikeContainer}>
+        <Text style={styles.spikeTitle}>{i18n.t('spike_analysis')}</Text>
+        <Text style={styles.spikeText}>
+          {i18n.t('highest_glucose')}: <Text style={styles.spikeValue}>{maxGlucose} mg/dL</Text>
+        </Text>
+        <Text style={styles.spikeDate}>{formatDate(maxDate)}</Text>
+      </View>
+    );
+  };
+
   const goToHome = () => navigation.navigate('PatientDashboard');
   const goToMyRecords = () => { /* Already on My Records */ };
   const goToMyProfile = () => navigation.navigate('PatientProfile');
@@ -75,7 +110,7 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#2C3E50" />
         </TouchableOpacity>
-        <Text style={styles.title}>My Health Records</Text>
+        <Text style={styles.title}>{i18n.t('history')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -85,12 +120,12 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
         ) : records.length === 0 ? (
           <View style={{ marginTop: 50, alignItems: 'center' }}>
             <Ionicons name="document-text-outline" size={50} color="#DDD" />
-            <Text style={styles.noDataText}>No records found.</Text>
+            <Text style={styles.noDataText}>{i18n.t('no_records') || "No records found."}</Text>
           </View>
         ) : (
           <>
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>Glucose Level Trend</Text>
+              <Text style={styles.chartTitle}>{i18n.t('glucose')}</Text>
               <View style={styles.chartArea}>
                 {chartData.map((value, index) => {
                   const prevValue = index > 0 ? chartData[index - 1] : value;
@@ -112,7 +147,7 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
                   );
                 })}
               </View>
-              <Text style={styles.chartLabel}>Past {records.length} Entries</Text>
+              {getSpikeAnalysis()}
             </View>
 
             <View style={styles.recordsList}>
@@ -120,9 +155,9 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
                 <View key={record.id} style={styles.recordItem}>
                   <Text style={styles.recordDate}>{formatDate(record.date)}</Text>
                   <View style={styles.recordDetails}>
-                    {record.glucoseLevel && <Text style={styles.recordDetailText}>Glucose: <Text style={{ fontWeight: 'bold', color: '#00BCD4' }}>{record.glucoseLevel}</Text></Text>}
-                    {record.bloodPressure && <Text style={styles.recordDetailText}>BP: {record.bloodPressure}</Text>}
-                    {record.weight && <Text style={styles.recordDetailText}>Weight: {record.weight} kg</Text>}
+                    {record.glucoseLevel && <Text style={styles.recordDetailText}>{i18n.t('glucose')}: <Text style={{ fontWeight: 'bold', color: '#00BCD4' }}>{record.glucoseLevel}</Text></Text>}
+                    {record.bloodPressure && <Text style={styles.recordDetailText}>{i18n.t('blood_pressure')}: {record.bloodPressure}</Text>}
+                    {record.weight && <Text style={styles.recordDetailText}>{i18n.t('weight')}: {record.weight} kg</Text>}
                   </View>
                 </View>
               ))}
@@ -144,11 +179,11 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={goToMyRecords}>
           <Ionicons name="stats-chart-outline" size={24} color="#00BCD4" />
-          <Text style={styles.tabTextActive}>My Records</Text>
+          <Text style={styles.tabTextActive}>{i18n.t('history')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={goToMyProfile}>
           <Ionicons name="person-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>My Profile</Text>
+          <Text style={styles.tabText}>{i18n.t('profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

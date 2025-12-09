@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '../firebaseConfig';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { i18n } from '../i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -12,6 +13,13 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
   const { patientId, patientName } = route.params || { patientId: 'unknown', patientName: 'Patient Details' };
   const [patientRecords, setPatientRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Force update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = i18n.onChange(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!patientId) return;
@@ -70,7 +78,7 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#2C3E50" />
         </TouchableOpacity>
-        <Text style={styles.title}>Records: {patientName}</Text>
+        <Text style={styles.title}>{i18n.t('records')}: {patientName}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -79,12 +87,12 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
         {loading ? (
           <ActivityIndicator size="large" color="#00BCD4" />
         ) : patientRecords.length === 0 ? (
-          <Text style={styles.noDataText}>No records found for this patient.</Text>
+          <Text style={styles.noDataText}>{i18n.t('no_records') || "No records found for this patient."}</Text>
         ) : (
           <>
             {/* Simple Chart */}
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>Glucose Level Trend</Text>
+              <Text style={styles.chartTitle}>{i18n.t('glucose')}</Text>
               <View style={styles.chartArea}>
                 {chartData.map((value, index) => {
                   const prevValue = index > 0 ? chartData[index - 1] : value;
@@ -116,9 +124,9 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
                 <View key={record.id} style={styles.recordItem}>
                   <Text style={styles.recordDate}>{formatDate(record.date)}</Text>
                   <View style={styles.recordDetails}>
-                    {record.glucoseLevel && <Text style={styles.recordDetailText}>Glucose: <Text style={{ fontWeight: 'bold', color: '#00BCD4' }}>{record.glucoseLevel}</Text></Text>}
-                    {record.bloodPressure && <Text style={styles.recordDetailText}>BP: {record.bloodPressure}</Text>}
-                    {record.weight && <Text style={styles.recordDetailText}>Weight: {record.weight} kg</Text>}
+                    {record.glucoseLevel && <Text style={styles.recordDetailText}>{i18n.t('glucose')}: <Text style={{ fontWeight: 'bold', color: '#00BCD4' }}>{record.glucoseLevel}</Text></Text>}
+                    {record.bloodPressure && <Text style={styles.recordDetailText}>{i18n.t('blood_pressure')}: {record.bloodPressure}</Text>}
+                    {record.weight && <Text style={styles.recordDetailText}>{i18n.t('weight')}: {record.weight} kg</Text>}
                   </View>
                 </View>
               ))}
@@ -136,11 +144,11 @@ const ViewPatientAddRecordScreen = ({ navigation, route }) => {
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={goToPatients}>
           <Ionicons name="people-outline" size={24} color="#00BCD4" />
-          <Text style={styles.tabTextActive}>Patients</Text>
+          <Text style={styles.tabTextActive}>{i18n.t('my_patients')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={goToMyProfile}>
           <Ionicons name="person-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>My Profile</Text>
+          <Text style={styles.tabText}>{i18n.t('profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -312,6 +320,12 @@ const styles = StyleSheet.create({
     color: '#00BCD4',
     fontWeight: 'bold',
     marginTop: 5,
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: 16,
+    marginTop: 20,
   },
 });
 
