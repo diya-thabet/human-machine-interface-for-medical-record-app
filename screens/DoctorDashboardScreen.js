@@ -205,6 +205,10 @@ const DoctorDashboardScreen = ({ navigation }) => {
           <Ionicons name="document-text-outline" size={20} color="#00BCD4" />
           <Text style={styles.actionLabel}>{i18n.t('view_records')}</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Chat', { recipientId: item.id, recipientName: item.fullName })}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#FF9800" />
+          <Text style={styles.actionLabel}>Chat</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => handleAssignDiet(item)}>
           <Ionicons name="nutrition-outline" size={20} color="#4CAF50" />
           <Text style={styles.actionLabel}>{i18n.t('assign_diet')}</Text>
@@ -407,9 +411,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   cardHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Enforce LTR structure
     padding: 15,
-    alignItems: 'center'
+    alignItems: 'center',
+    direction: 'ltr',
   },
   avatar: {
     width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0F7FA',

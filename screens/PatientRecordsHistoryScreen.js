@@ -138,7 +138,7 @@ const PatientRecordsHistoryScreen = ({ navigation }) => {
                       }
                     ]
                   }}
-                  width={width - 40} // from react-native
+                  width={width - 50} // slightly more padding to prevent cut-off
                   height={220}
                   yAxisSuffix=""
                   yAxisInterval={1}
