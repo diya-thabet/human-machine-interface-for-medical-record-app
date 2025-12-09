@@ -186,6 +186,13 @@ const DoctorDashboardScreen = ({ navigation }) => {
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
                     style={styles.actionButton}
+                    onPress={() => navigation.navigate('Chat', { recipientId: patient.id, recipientName: patient.fullName || patient.email })}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={24} color="#4CAF50" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
                     onPress={() => handleAssignDiet(patient)}
                   >
                     <Ionicons name="nutrition-outline" size={24} color="#00BCD4" />
@@ -205,9 +212,14 @@ const DoctorDashboardScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Action Button for adding new patient */}
-      <TouchableOpacity style={styles.fab} onPress={handleAddPatient}>
-        <Ionicons name="person-add-outline" size={30} color="#FFFFFF" />
-      </TouchableOpacity>
+      <View style={styles.fabContainer}>
+        <TouchableOpacity style={styles.fabSecondary} onPress={() => navigation.navigate('DoctorAppointments')}>
+          <Ionicons name="calendar-outline" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.fab} onPress={handleAddPatient}>
+          <Ionicons name="person-add-outline" size={30} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
       {/* Assign Patient Modal */}
       <Modal
@@ -341,14 +353,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
+    right: 25,
+    bottom: Platform.OS === 'ios' ? 100 : 120,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  fab: {
     width: 60,
     height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    right: 25,
-    bottom: Platform.OS === 'ios' ? 100 : 120, // Keep consistent with patient screens
     backgroundColor: '#00BCD4',
     borderRadius: 30,
     elevation: 8,
@@ -356,7 +372,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    zIndex: 10,
+    marginTop: 15,
+  },
+  fabSecondary: {
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#9C27B0',
+    borderRadius: 25,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   tabBar: {
     flexDirection: 'row',

@@ -148,6 +148,13 @@ const PatientDashboardScreen = ({ navigation }) => {
               <Text style={styles.actionText}>{i18n.t('upcoming_appointments') || 'Appt.'}</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Chat', { recipientId: auth.currentUser?.assignedDoctorIds?.[0] || 'support', recipientName: 'My Doctor' })}>
+              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
+                <Ionicons name="chatbubble-ellipses" size={32} color="#4CAF50" />
+              </View>
+              <Text style={styles.actionText}>{i18n.t('chat') || 'Chat'}</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('PatientDiet')}>
               <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
                 <Ionicons name="nutrition" size={32} color="#FF9800" />
@@ -161,7 +168,9 @@ const PatientDashboardScreen = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{i18n.t('upcoming_appointments')}</Text>
-            <TouchableOpacity><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('PatientAppointments')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
 
           {loading ? (

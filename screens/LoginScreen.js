@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../firebaseConfig'; // Import auth and db
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '../firebaseConfig'; // Import auth
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Import sign in function
 import { doc, getDoc } from 'firebase/firestore';
 import { i18n } from '../i18n';
 
@@ -101,6 +101,21 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.registerLink}>{i18n.t('register_link')}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Language Switcher */}
+        <View style={styles.langContainer}>
+          {['en', 'fr', 'ar'].map(lang => (
+            <TouchableOpacity
+              key={lang}
+              style={[styles.langButton, i18n.locale === lang && styles.langButtonActive]}
+              onPress={async () => {
+                await i18n.setLocale(lang);
+              }}
+            >
+              <Text style={[styles.langText, i18n.locale === lang && styles.langTextActive]}>{lang.toUpperCase()}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -161,10 +176,35 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   registerLink: {
-    color: '#00BCD4', // Link color matches accent
-    fontSize: 16,
+    color: '#00BCD4',
+    marginTop: 15,
+    fontSize: 14,
     textDecorationLine: 'underline',
   },
+  langContainer: {
+    flexDirection: 'row',
+    marginTop: 30,
+    justifyContent: 'center',
+  },
+  langButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#00BCD4',
+    marginHorizontal: 5,
+    backgroundColor: 'transparent',
+  },
+  langButtonActive: {
+    backgroundColor: '#00BCD4',
+  },
+  langText: {
+    color: '#00BCD4',
+    fontWeight: 'bold',
+  },
+  langTextActive: {
+    color: '#FFF',
+  }
 });
 
 export default LoginScreen;

@@ -26,6 +26,9 @@ import DoctorDietScreen from './screens/DoctorDietScreen';
 import PatientDietScreen from './screens/PatientDietScreen';
 import RequestAppointmentScreen from './screens/RequestAppointmentScreen';
 import DoctorAppointmentScreen from './screens/DoctorAppointmentScreen';
+import ChatScreen from './screens/ChatScreen';
+import DoctorAppointmentsScreen from './screens/DoctorAppointmentsScreen';
+import PatientAppointmentsScreen from './screens/PatientAppointmentsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -124,6 +127,21 @@ export default function App() {
           <Stack.Screen // NEW
             name="DoctorAppointment"
             component={DoctorAppointmentScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="Chat"
+            component={ChatScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="DoctorAppointments"
+            component={DoctorAppointmentsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen // NEW
+            name="PatientAppointments"
+            component={PatientAppointmentsScreen}
             options={{ headerShown: false }}
           />
 
